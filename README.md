@@ -1,12 +1,27 @@
 # The Cape — Header "Inchiostro"
 
-Barra + menu a tutto schermo per la pagina **The Cape Studio**.
+Bottone + menu a tutto schermo per la pagina **The Cape Studio**.
 Due file, nessuna dipendenza, niente da creare nel Designer.
+
+Un bottone in basso al centro, con dentro solo la parola: scendendo sparisce
+sotto il bordo, risalendo torna. Non ha un colore suo — sta in
+`mix-blend-mode: difference`, quindi e' sempre il negativo esatto di quello
+che ha sotto, pixel per pixel, e la scritta resta leggibile su qualunque cosa
+gli passi sopra.
+
+Al click un pennello dipinge lo schermo in diagonale, da in alto a sinistra a
+in basso a destra, con la fisica dell'`ink-bleed`. In uscita fa la stessa
+identica cosa nella stessa direzione: non torna indietro, ricomincia da in
+alto a sinistra e finisce in basso a destra.
+
+Il menu e' alto esattamente uno schermo e non scorre: due colonne da meta'
+esatta, a sinistra l'immagine che copre tutta la sua meta', a destra le voci.
+Passando su una voce l'immagine cambia.
 
 | File | Cosa e' | Peso |
 |---|---|---|
-| `cape-header.css` | tutto lo stile: barra, menu, ripiego senza WebGL | ~11 KB |
-| `cape-header.js` | markup, coreografia e i due fluidi | ~55 KB |
+| `cape-header.css` | tutto lo stile: bottone, menu, ripiego senza WebGL | ~7 KB |
+| `cape-header.js` | markup, coreografia e i due fluidi | ~52 KB |
 
 ---
 
