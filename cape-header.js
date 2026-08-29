@@ -86,14 +86,19 @@ var HIDE_ON_DOWN = true;  /* scende scrollando in giu', risale scrollando in su 
 var TOP_ZONE     = 48;    /* entro questi px dalla cima e' sempre visibile   */
 var SCROLL_EPS   = 5;     /* px di scroll ignorati (evita il tremolio)       */
 
+/* --- il bottone: bianco o nero, niente altro ----------------------------- */
+var TONE_PROBE = true;    /* false = bottone sempre carta su inchiostro       */
+var MEDIA_TONE = 'dark';  /* cosa assumere sotto foto e video senza etichetta.
+                             Metti data-nav-tone="light" su una sezione per
+                             dirle "qui sotto e' chiaro".                    */
+
 /* --- l'inchiostro: il pennello che dipinge lo schermo --------------------
    Un fronte a 45 gradi che va da in alto a sinistra a in basso a destra, con
    sopra delle pennellate vere che gli corrono davanti. L'uscita fa la stessa
    identica cosa nella stessa direzione: non torna indietro, ricomincia da in
    alto a sinistra e finisce in basso a destra.                             */
-/* --- l'inchiostro che entra dai lati (stesso solutore di ink-bleed) ------- */
-var FLOOD_AMT   = 3.60;   /* quanto colorante versano i due fronti            */
-var FLOOD_PUSH  = 0.018;  /* quanto forte spingono verso il centro. Alzalo e le
+var FLOOD_AMT   = 3.60;   /* quanto colorante versa il fronte                 */
+var FLOOD_PUSH  = 0.018;  /* quanto forte spinge lungo la diagonale. Alzalo e le
                              dita di inchiostro scappano avanti al fronte.     */
 var FLOOD_DISS  = 2.00;   /* quanto svanisce l'inchiostro che corre troppo avanti:
                              e' questo che tiene le dita attaccate al fronte.  */
@@ -101,20 +106,23 @@ var FLOOD_THICK = 0.052;  /* spessore della banda che corre davanti al fronte  *
 var FLOOD_ADV   = 1.06;   /* quanto corre il fronte: >1 per chiudere gli angoli */
 var FLOOD_DABS  = 5;      /* quante impronte al massimo per frame lungo il tratto
                              percorso dalla mano. 0 = fronte liscio, senza pennello */
-var FLOOD_DAB_R = 0.014;  /* quanto e' larga la setola                         */
-var FLOOD_DAB_A = 0.30;   /* quanto colorante lascia ogni impronta            */
-var FLOOD_SWEEP = 2.60;   /* passate al secondo: la mano va avanti e indietro
+var FLOOD_DAB_R = 0.030;  /* quanto e' larga la setola. E' exp(-d^2/r): il raggio
+                             vero e' ~sqrt(r), quindi qui siamo sul 17% dell'altezza */
+var FLOOD_DAB_A = 0.20;   /* quanto colorante lascia ogni impronta            */
+var FLOOD_SWEEP = 3.30;   /* passate al secondo: la mano va avanti e indietro
                              lungo il fronte, come chi pittura un muro         */
-var FLOOD_DAB_V = 0.055;  /* quanta velocita' la mano passa al fluido: e' questo
+var FLOOD_DAB_V = 0.090;  /* quanta velocita' la mano passa al fluido: e' questo
                              che smaccia l'inchiostro nel verso della passata  */
 
 /* --- il pennello che inverte i colori ------------------------------------ */
 var BRUSH        = true;  /* false = niente pennellata                        */
 var BRUSH_ALWAYS = false; /* true = attivo anche a menu chiuso, su tutta la pagina */
-var BRUSH_R      = 0.0042;/* raggio dello splat. E' exp(-d^2/r), quindi il raggio
-                             vero e' ~sqrt(r): 0.0042 ~ 6% dell'altezza.      */
+var BRUSH_R      = 0.00105;/* raggio dello splat. E' exp(-d^2/r), quindi il raggio
+                             vero e' ~sqrt(r): per dimezzarlo si divide r per
+                             quattro. 0.00105 ~ 3% dell'altezza.              */
 var BRUSH_AMT    = 0.36;  /* colorante per splat: piu' alto = pennellata piu' larga */
-var BRUSH_STEP   = 0.011; /* passo lungo il tratto: piu' basso = tratto piu' continuo */
+var BRUSH_STEP   = 0.006; /* passo lungo il tratto: va tenuto sotto al raggio,
+                             se no un pennello piccolo lascia una fila di punti */
 var BRUSH_PULL   = 0.26;  /* quanta velocita' della mano passa al fluido. Piu' e'
                              alto piu' l'inchiostro scappa avanti alla mano;
                              abbassalo per tenerlo incollato al puntatore.     */
@@ -253,6 +261,54 @@ function mount(){
    ========================================================================== */
 var shown = false, lastY = 0, ticking = false, open = false;
 
+var PAPER_HEX = '#FBFAF7', INK_HEX = '#252A22';
+var lightBg = false, lastProbe = 0;
+
+/* Guarda tre punti appena sopra il bordo del bottone, risale il DOM fino al
+   primo sfondo vero e ne misura la luminosita'. Sotto foto e video i pixel non
+   si leggono: vale l'etichetta data-nav-tone della sezione, o MEDIA_TONE.
+   Il risultato non e' un colore, e' una domanda sola: chiaro o scuro? */
+function rgbOf(str){
+  var m = /rgba?\(([^)]+)\)/.exec(str || '');
+  if(!m) return null;
+  var q = m[1].split(',').map(parseFloat);
+  return { r:q[0], g:q[1], b:q[2], a:(q.length > 3 ? q[3] : 1) };
+}
+function lumAt(x, y){
+  var node = d.elementFromPoint(x, y);
+  while(node && node !== d.documentElement){
+    if(node.hasAttribute && node.hasAttribute('data-nav-tone'))
+      return node.getAttribute('data-nav-tone') === 'light' ? 1 : 0;
+    var cs = getComputedStyle(node);
+    if(node.tagName === 'VIDEO' || node.tagName === 'IMG' ||
+       (cs.backgroundImage && cs.backgroundImage !== 'none'))
+      return MEDIA_TONE === 'light' ? 1 : 0;
+    var c = rgbOf(cs.backgroundColor);
+    if(c && c.a > 0.15) return (0.2126*c.r + 0.7152*c.g + 0.0722*c.b)/255;
+    node = node.parentElement;
+  }
+  return 1;                                   /* niente sfondo = carta bianca */
+}
+function probe(){
+  var now = nowMs();
+  if(now - lastProbe < 180) return;
+  lastProbe = now;
+  /* sul box di layout, non su getBoundingClientRect: quello segue la transform
+     che nasconde il bottone, e la sonda smetterebbe di leggere */
+  var cx = btn.offsetLeft, w = btn.offsetWidth || 90;
+  var y  = btn.offsetTop - 10;
+  if(y < 0 || y > d.documentElement.clientHeight) return;
+  var half = w/2 + 26;
+  var lum = (lumAt(cx - half, y) + lumAt(cx, y) + lumAt(cx + half, y)) / 3;
+  /* due soglie invece di una: sul confine il bottone non sfarfalla */
+  var next = lightBg ? (lum > 0.45) : (lum > 0.58);
+  if(next !== lightBg){ lightBg = next; paintBtn(); }
+}
+function paintBtn(){
+  btn.style.setProperty('--ch-btn-bg',  lightBg ? INK_HEX : PAPER_HEX);
+  btn.style.setProperty('--ch-btn-ink', lightBg ? PAPER_HEX : INK_HEX);
+}
+
 function show(){ if(!shown){ shown = true;  btn.classList.add('is-in'); } }
 function hide(){ if(shown){  shown = false; btn.classList.remove('is-in'); } }
 
@@ -270,6 +326,7 @@ function onScroll(){
       else if(dy < -SCROLL_EPS)    show();
     }
     lastY = y;
+    if(TONE_PROBE && !open) probe();
   });
 }
 
@@ -1152,6 +1209,13 @@ function init(){
 
   lastY = window.pageYOffset || 0;
   window.addEventListener('scroll', onScroll, {passive:true});
+  if(TONE_PROBE){
+    probe(); paintBtn();
+    (function tick(){
+      if(!open) probe();
+      setTimeout(function(){ requestAnimationFrame(tick); }, 140);
+    })();
+  }
   var rt;
   window.addEventListener('resize', function(){
     clearTimeout(rt);

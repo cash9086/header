@@ -17,31 +17,34 @@
   --ch-ease:cubic-bezier(.16,1,.3,1);      /* la salita del sito */
   --ch-ease-io:cubic-bezier(.76,0,.24,1);  /* le transizioni grandi */
   --ch-pad:clamp(20px,4vw,64px);           /* il respiro dentro la colonna delle voci */
+  /* scritte dal JS: o carta su inchiostro, o inchiostro su carta. Mai altro. */
+  --ch-btn-bg:#FBFAF7;
+  --ch-btn-ink:#252A22;
 }
 
 /* --------------------------------------------------------------- BOTTONE --
    In basso al centro. Sale scrollando in su, scende scrollando in giu'.
-   Il colore non si sceglie: mix-blend-mode:difference su bianco da' il
-   negativo esatto di quello che c'e' sotto, pixel per pixel. La scritta e'
-   nera, quindi in difference resta il colore dello sfondo: si legge sempre,
-   su qualunque cosa passi, senza campionare niente.                        */
+   Due colori soli: o carta con la scritta in inchiostro, o inchiostro con la
+   scritta in carta. Il JS guarda quanto e' chiaro cio' che gli passa sopra e
+   sceglie quale delle due; la scritta e' sempre il contrario del suo fondo.
+   Niente colori invertiti, niente tinte a caso.                           */
 .capehdr-btn{
   position:fixed; left:50%; bottom:clamp(18px,2.4vw,38px); z-index:9020;
   display:inline-flex; align-items:center; justify-content:center;
   margin:0; padding:clamp(11px,.95vw,16px) clamp(20px,2vw,32px);
   border:0; border-radius:999px;
-  background:#fff; color:#000;
-  mix-blend-mode:difference;
+  background:var(--ch-btn-bg); color:var(--ch-btn-ink);
   font-family:'Jost',system-ui,-apple-system,"Segoe UI",sans-serif;
-  font-size:clamp(10px,.72vw,12.5px); font-weight:200; letter-spacing:.26em;
+  font-size:clamp(10px,.72vw,12.5px); font-weight:200; letter-spacing:.2em;
   line-height:1; text-transform:uppercase; white-space:nowrap;
   cursor:pointer; -webkit-appearance:none; appearance:none;
   opacity:0; transform:translate3d(-50%,180%,0);
-  transition:transform .6s var(--ch-ease), opacity .45s var(--ch-ease);
+  transition:transform .6s var(--ch-ease), opacity .45s var(--ch-ease),
+             background-color .45s linear, color .45s linear;
   will-change:transform;
 }
 .capehdr-btn.is-in{ opacity:1; transform:translate3d(-50%,0,0); }
-.capehdr-btn:focus-visible{ outline:2px solid #fff; outline-offset:4px; }
+.capehdr-btn:focus-visible{ outline:1px solid var(--ch-btn-bg); outline-offset:4px; }
 .capehdr-btn__label{ position:relative; display:inline-block; overflow:hidden; white-space:nowrap; }
 .capehdr-btn__label span{ display:inline-block; }
 
@@ -133,24 +136,31 @@
 .capehdr-link:hover::after,
 .capehdr-link:focus-visible::after{ transform:scaleX(1); }
 
+/* Le spaziature vengono dalla sezione del carosello, cosi' il menu e la pagina
+   parlano la stessa lingua: interlinea stretta sui titoli (.86, come
+   .studio-headline__row) e tracking largo sulle etichettine (.2em e lo stesso
+   grigio di .studio-stats__meta). Il contrasto fra i due e' la firma
+   tipografica di quella sezione. Sulle maiuscole in Jost 200 il tracking del
+   titolo va pero' in positivo: le capitali chiedono aria dove il Bodoni
+   minuscolo chiedeva di stringere. */
 .capehdr-name{
   display:block;
   font-family:'Jost',system-ui,-apple-system,"Segoe UI",sans-serif; font-weight:200;
-  font-size:clamp(1.5rem,6.4vh,4.2rem); line-height:1; letter-spacing:-.005em;
+  font-size:clamp(1.5rem,6.2vh,4.1rem); line-height:.86; letter-spacing:.04em;
   text-transform:uppercase;
   color:var(--ch-ink);
   transition:color .45s var(--ch-ease);
   white-space:nowrap;
 }
 .capehdr-desc{
-  display:block; margin-top:clamp(4px,1vh,13px);
-  font-size:clamp(9px,1.4vh,12px); font-weight:200; letter-spacing:.22em;
-  text-transform:uppercase; color:rgba(37,42,34,.40); white-space:nowrap;
+  display:block; margin-top:clamp(7px,1.5vh,18px);
+  font-size:clamp(9px,1.35vh,11.5px); font-weight:200; letter-spacing:.2em;
+  text-transform:uppercase; color:rgba(37,42,34,.38); white-space:nowrap;
   transition:color .45s var(--ch-ease);
 }
 /* passare sopra l'elenco spegne tutto il resto: resta accesa una voce sola */
 .capehdr-list:hover .capehdr-name{ color:rgba(37,42,34,.24); }
-.capehdr-list:hover .capehdr-desc{ color:rgba(37,42,34,.20); }
+.capehdr-list:hover .capehdr-desc{ color:rgba(37,42,34,.18); }
 .capehdr-link:hover .capehdr-name,
 .capehdr-link:focus-visible .capehdr-name,
 .capehdr-link:hover .capehdr-desc,
