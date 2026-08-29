@@ -1,6 +1,7 @@
 /* ============================================================================
    THE CAPE — HEADER "INCHIOSTRO"  ·  cape-header.css
-   Barra + menu a tutto schermo per la pagina The Cape Studio.
+   Bottone in basso al centro + menu a tutto schermo, due colonne:
+   a sinistra l'immagine, a destra le voci.
 
    Va nell'<head> della pagina:
      <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/cash9086/header@VERSIONE/cape-header.css">
@@ -9,7 +10,7 @@
    cartella — funziona uguale, ma con un viaggio di rete in piu'.
 ============================================================================ */
 
-/* ============ THE CAPE HEADER — token della pagina, non nuovi colori ======= */
+/* ============ token: quelli della pagina, non colori nuovi ================ */
 :root{
   --ch-paper:#FBFAF7;      /* carta: il fondo del menu (lo stesso di .studio-hero) */
   --ch-ink:#252A22;        /* inchiostro: il testo             */
@@ -17,81 +18,45 @@
   --ch-ease:cubic-bezier(.16,1,.3,1);      /* la salita del sito */
   --ch-ease-io:cubic-bezier(.76,0,.24,1);  /* le transizioni grandi */
   --ch-gutter:clamp(20px,5.833vw,84px);    /* il margine della pagina (84/1440) */
-  --ch-h:clamp(54px,4.2vw,74px);           /* altezza barra */
-  /* scritte dal JS mentre la barra legge lo sfondo */
-  --ch-bar-bg:rgba(16,16,19,.30);
-  --ch-bar-line:rgba(241,236,226,.12);
-  --ch-bar-ink:rgba(241,236,226,.86);
+  /* scritte dal JS mentre il bottone legge lo sfondo */
+  --ch-btn-bg:rgba(16,16,19,.34);
+  --ch-btn-line:rgba(241,236,226,.16);
+  --ch-btn-ink:rgba(241,236,226,.92);
 }
 
-/* ---------------------------------------------------------------- BARRA -- */
-.capehdr-bar{
-  position:fixed; top:0; left:0; right:0; z-index:9020;
-  height:var(--ch-h);
-  display:flex; align-items:center; justify-content:space-between;
-  padding:0 var(--ch-gutter);
-  background:var(--ch-bar-bg);
-  border-bottom:1px solid var(--ch-bar-line);
+/* --------------------------------------------------------------- BOTTONE --
+   In basso al centro. Sale scrollando in su, scende scrollando in giu'.
+   Dentro c'e' solo la parola: niente icone, niente contatori.             */
+.capehdr-btn{
+  position:fixed; left:50%; bottom:clamp(18px,2.4vw,38px); z-index:9020;
+  display:inline-flex; align-items:center; justify-content:center;
+  margin:0; padding:clamp(11px,.95vw,16px) clamp(20px,2vw,32px);
+  border:1px solid var(--ch-btn-line); border-radius:999px;
+  background:var(--ch-btn-bg);
   -webkit-backdrop-filter:blur(11px) saturate(1.18);
           backdrop-filter:blur(11px) saturate(1.18);
-  transform:translate3d(0,-101%,0);
-  transition:transform .58s var(--ch-ease),
-             background-color .5s linear,
-             border-color .5s linear;
-  will-change:transform;
+  color:var(--ch-btn-ink);
   font-family:'Jost',system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:clamp(9.5px,.68vw,12px); font-weight:500; letter-spacing:.24em;
+  line-height:1; text-transform:uppercase; white-space:nowrap;
+  cursor:pointer; -webkit-appearance:none; appearance:none;
+  opacity:0; transform:translate3d(-50%,180%,0);
+  transition:transform .6s var(--ch-ease), opacity .45s var(--ch-ease),
+             background-color .5s linear, border-color .5s linear, color .5s linear;
+  will-change:transform;
 }
-.capehdr-bar.is-in{ transform:translate3d(0,0,0); }
-.capehdr-bar.is-boot{ opacity:0; }
-.capehdr-bar.is-open{
-  background:transparent; border-bottom-color:rgba(37,42,34,.12);
+.capehdr-btn.is-in{ opacity:1; transform:translate3d(-50%,0,0); }
+.capehdr-btn.is-open{
+  background:transparent; border-color:rgba(37,42,34,.22);
   -webkit-backdrop-filter:none; backdrop-filter:none;
 }
-
-.capehdr-bar__mark,
-.capehdr-bar__bag,
-.capehdr-bar__btn{
-  font-size:clamp(9.5px,.68vw,12px);
-  font-weight:500; letter-spacing:.22em; text-transform:uppercase;
-  line-height:1; color:var(--ch-bar-ink);
-  transition:color .5s linear;
-}
-.capehdr-bar__mark{ text-decoration:none; white-space:nowrap; }
-.capehdr-bar__right{ display:flex; align-items:center; gap:clamp(18px,2vw,38px); }
-.capehdr-bar__bag{
-  display:inline-flex; align-items:baseline; gap:.5em;
-  text-decoration:none; white-space:nowrap; opacity:.72;
-  transition:opacity .4s var(--ch-ease), color .5s linear;
-}
-.capehdr-bar__bag:hover{ opacity:1; }
-.capehdr-bar__count{ font-variant-numeric:tabular-nums; opacity:.6; }
-
-/* il bottone: solo testo + una stanghetta che si accorcia in croce */
-.capehdr-bar__btn{
-  display:inline-flex; align-items:center; gap:.85em;
-  background:none; border:0; padding:.6em 0; margin:0;
-  cursor:pointer; -webkit-appearance:none; appearance:none;
-}
-.capehdr-bar__label{ position:relative; display:inline-block; overflow:hidden; white-space:nowrap; }
-.capehdr-bar__label span{ display:inline-block; }
-.capehdr-bar__glyph{ position:relative; width:15px; height:9px; flex:0 0 auto; }
-.capehdr-bar__glyph i{
-  position:absolute; left:0; right:0; height:1px; background:currentColor;
-  transition:transform .5s var(--ch-ease), opacity .3s linear;
-}
-.capehdr-bar__glyph i:first-child{ top:0; }
-.capehdr-bar__glyph i:last-child{ bottom:0; }
-.capehdr-bar__btn:hover .capehdr-bar__glyph i:first-child{ transform:translateY(1px); }
-.capehdr-bar__btn:hover .capehdr-bar__glyph i:last-child{ transform:translateY(-1px); }
-.is-open .capehdr-bar__glyph i:first-child{ transform:translateY(4px) rotate(45deg); }
-.is-open .capehdr-bar__glyph i:last-child{ transform:translateY(-4px) rotate(-45deg); }
-.capehdr-bar__btn:focus-visible{ outline:1px solid var(--ch-bar-ink); outline-offset:6px; }
+.capehdr-btn:focus-visible{ outline:1px solid currentColor; outline-offset:5px; }
+.capehdr-btn__label{ position:relative; display:inline-block; overflow:hidden; white-space:nowrap; }
+.capehdr-btn__label span{ display:inline-block; }
 
 /* ------------------------------------------------------ INCHIOSTRO (velo) -- */
-.capehdr-veil{
-  position:fixed; inset:0; z-index:9000;
-  pointer-events:none; display:none;
-}
+.capehdr-veil{ position:fixed; inset:0; z-index:9000; pointer-events:none; display:none; }
+
 /* ripiego senza WebGL: due ante che si chiudono al centro */
 .capehdr-fold{ position:fixed; inset:0; z-index:9000; pointer-events:none; display:none; }
 .capehdr-fold i{
@@ -111,134 +76,89 @@
   opacity:0; transform:scaleY(.2); pointer-events:none;
 }
 
-/* ------------------------------------------------------------- IL MENU ---
-   Carta bianca, inchiostro, filetti a capello. Gli stessi valori della
-   sezione .studio-hero gia' in pagina: non e' un secondo linguaggio, e' lo
-   stesso, a tutto schermo.                                                 */
+/* ------------------------------------------------------------- IL MENU ----
+   Carta bianca e basta. Due colonne: l'immagine e le voci. Nient'altro.  */
 .capehdr-panel{
   position:fixed; inset:0; z-index:9010;
   display:none; overflow-y:auto; overscroll-behavior:contain;
-  padding:calc(var(--ch-h) + clamp(30px,4.4vw,70px)) var(--ch-gutter) clamp(24px,3vw,48px);
+  padding:clamp(24px,4vw,64px) var(--ch-gutter) clamp(92px,8vw,132px);
   color:var(--ch-ink);
   font-family:'Jost',system-ui,-apple-system,"Segoe UI",sans-serif;
   -webkit-font-smoothing:antialiased;
 }
 .capehdr-panel.is-on{ display:block; }
 .capehdr-panel:focus{ outline:none; }
+
 .capehdr-grid{
-  min-height:calc(100vh - var(--ch-h) - clamp(54px,7.4vw,118px));
-  display:grid; grid-template-columns:15vw 1fr 15vw; gap:clamp(24px,4vw,64px);
-  align-content:space-between;
-}
-.capehdr-foot{ grid-column:1 / -1; }
-
-/* etichettine: identiche a .studio-stats__label del sito */
-.capehdr-lab{
-  font-size:clamp(9.5px,.68vw,12px); font-weight:500; letter-spacing:.2em;
-  text-transform:uppercase; color:rgba(37,42,34,.42); line-height:1;
-}
-.capehdr-rule{ height:1px; background:rgba(37,42,34,.16); margin:.95vw 0 1.15vw;
-  transform-origin:0 50%; }
-.capehdr-note{
-  font-size:clamp(12px,.86vw,15px); font-weight:300; line-height:1.62;
-  color:rgba(37,42,34,.62); max-width:26ch; margin:0;
+  min-height:calc(100vh - clamp(116px,12vw,196px));
+  display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:clamp(28px,4vw,68px); align-items:center;
 }
 
-/* --- l'indice: nome a sinistra, didascalia a destra, si compongono --- */
-.capehdr-index{ list-style:none; margin:0; padding:0; }
-.capehdr-item{ position:relative; }
-/* i filetti sono elementi, non bordi: un bordo non si puo' tirare */
-.capehdr-hr{
-  position:absolute; left:0; right:0; top:0; height:1px;
-  background:rgba(37,42,34,.13); transform-origin:0 50%;
+/* --- la colonna dell'immagine ------------------------------------------- */
+.capehdr-visual{
+  position:relative; width:100%; height:min(74vh,48vw);
+  clip-path:inset(0 0 0 0);
 }
-.capehdr-hr--b{ top:auto; bottom:0; }
+.capehdr-visual img{
+  position:absolute; inset:0; width:100%; height:100%;
+  object-fit:contain; object-position:left center;
+  opacity:0; transition:opacity .55s var(--ch-ease);
+  will-change:opacity;
+}
+.capehdr-visual img.is-on{ opacity:1; }
+
+/* --- la colonna delle voci ---------------------------------------------- */
+.capehdr-list{ list-style:none; margin:0; padding:0; }
+.capehdr-item + .capehdr-item{ margin-top:clamp(18px,2.2vw,40px); }
 .capehdr-link{
-  position:relative; display:flex; align-items:baseline; justify-content:space-between;
-  gap:2vw; padding:clamp(14px,1.5vw,26px) 0; text-decoration:none; color:inherit;
+  display:block; text-decoration:none; color:inherit;
+  padding:.06em 0;
 }
-.capehdr-link::after{                      /* la riga che si tira nell'hover */
-  content:""; position:absolute; left:0; bottom:-1px; height:1px; width:100%;
-  background:var(--ch-ink); transform:scaleX(0); transform-origin:0 50%;
-  transition:transform .62s var(--ch-ease);
-}
-.capehdr-link:hover::after,
-.capehdr-link:focus-visible::after{ transform:scaleX(1); }
 .capehdr-name{
+  display:block;
   font-family:'Bodoni Moda',Georgia,'Times New Roman',serif; font-weight:400;
-  font-size:clamp(2rem,5.2vw,5.4rem); line-height:1; letter-spacing:-.022em;
+  font-size:clamp(1.9rem,4.4vw,4.4rem); line-height:1; letter-spacing:-.022em;
   color:var(--ch-ink);
-  transition:color .45s var(--ch-ease), opacity .45s var(--ch-ease);
+  transition:color .45s var(--ch-ease);
   white-space:nowrap;
 }
 .capehdr-desc{
-  font-size:clamp(9.5px,.68vw,12px); font-weight:500; letter-spacing:.18em;
+  display:block; margin-top:.62em;
+  font-size:clamp(9px,.66vw,11.5px); font-weight:500; letter-spacing:.2em;
   text-transform:uppercase; color:rgba(37,42,34,.34); white-space:nowrap;
-  transition:color .45s var(--ch-ease), opacity .45s var(--ch-ease);
+  transition:color .45s var(--ch-ease);
 }
-/* passare sopra l'indice spegne tutto il resto: resta accesa una riga sola */
-.capehdr-index:hover .capehdr-name{ color:rgba(37,42,34,.26); }
-.capehdr-link:hover .capehdr-name{ color:var(--ch-ink); }
-.capehdr-link:hover .capehdr-desc{ color:var(--ch-rose); }   /* l'unico colore */
-.capehdr-link:focus-visible{ outline:1px solid rgba(37,42,34,.45); outline-offset:4px; }
-
-/* --- colonna destra: cosa c'e' adesso --- */
-.capehdr-sub{ list-style:none; margin:0; padding:0; }
-.capehdr-sub a{
-  display:flex; align-items:baseline; justify-content:space-between; gap:1em;
-  padding:.42vw 0; text-decoration:none;
-  font-size:clamp(11px,.8vw,14px); font-weight:400; letter-spacing:.02em;
-  color:rgba(37,42,34,.62); transition:color .4s var(--ch-ease);
-}
-.capehdr-sub a:hover{ color:var(--ch-ink); }
-.capehdr-sub__y{
-  font-size:clamp(9px,.6vw,11px); letter-spacing:.14em; opacity:.42;
-  font-variant-numeric:tabular-nums; flex:0 0 auto;
-}
-/* il bottone: e' .studio-btn, non un bottone nuovo */
-.capehdr-cta{
-  display:inline-flex; align-items:center; gap:.9em; margin-top:1.6vw;
-  padding:clamp(11px,.95vw,17px) clamp(18px,1.9vw,30px);
-  border:1px solid rgba(37,42,34,.24); border-radius:999px;
-  font-size:clamp(9.5px,.66vw,12px); font-weight:500; letter-spacing:.16em;
-  text-transform:uppercase; text-decoration:none; color:var(--ch-ink);
-  transition:background-color .4s var(--ch-ease), color .4s var(--ch-ease), border-color .4s var(--ch-ease);
-}
-.capehdr-cta:hover{ background:var(--ch-ink); color:var(--ch-paper); border-color:var(--ch-ink); }
-
-.capehdr-foot{
-  position:relative;
-  display:flex; align-items:flex-end; justify-content:space-between; gap:2vw;
-  padding-top:clamp(18px,2vw,32px);
-}
-.capehdr-foot span{
-  font-size:clamp(9px,.62vw,11px); font-weight:500; letter-spacing:.2em;
-  text-transform:uppercase; color:rgba(37,42,34,.34);
-}
+/* passare sopra l'elenco spegne tutto il resto: resta accesa una voce sola */
+.capehdr-list:hover .capehdr-name{ color:rgba(37,42,34,.24); }
+.capehdr-link:hover .capehdr-name,
+.capehdr-link:focus-visible .capehdr-name{ color:var(--ch-ink); }
+.capehdr-link:hover .capehdr-desc,
+.capehdr-link:focus-visible .capehdr-desc{ color:var(--ch-rose); }   /* l'unico colore */
+.capehdr-link:focus-visible{ outline:1px solid rgba(37,42,34,.45); outline-offset:6px; }
 
 /* --- l'involucro che scorre dietro il bordo del proprio contenitore.
        Il ritaglio lo mette e lo toglie il JS: a riposo non c'e', cosi' le pance
        delle lettere e l'anello di focus non vengono tagliati. --- */
 .capehdr-slide{ display:block; }
 
-/* ------------------------------------------------------------ PENNELLO --- */
+/* ------------------------------------------------------------ PENNELLO ---- */
 .capehdr-brush{
   position:fixed; inset:0; z-index:9030;
   pointer-events:none; display:none;
   mix-blend-mode:difference;             /* e' questo che inverte i colori */
 }
 
-/* --------------------------------------------------------------- MOBILE -- */
+/* --------------------------------------------------------------- MOBILE --- */
 @media (max-width:991px){
-  .capehdr-grid,.capehdr-row2{ grid-template-columns:1fr; }
-  .capehdr-panel{ padding-top:calc(var(--ch-h) + 26px); }
-  .capehdr-link{ padding:14px 0; }
-  .capehdr-desc{ display:none; }
-  .capehdr-name{ font-size:clamp(1.9rem,9vw,3.2rem); white-space:normal; }
-  .capehdr-foot{ flex-direction:column; align-items:flex-start; gap:10px; }
+  .capehdr-grid{ grid-template-columns:1fr; align-content:center; gap:clamp(22px,5vw,40px); }
+  .capehdr-visual{ height:min(34vh,52vw); }
+  .capehdr-visual img{ object-position:center; }
+  .capehdr-name{ font-size:clamp(1.8rem,9vw,3rem); white-space:normal; }
+  .capehdr-item + .capehdr-item{ margin-top:18px; }
 }
 
 @media (prefers-reduced-motion:reduce){
-  .capehdr-bar,.capehdr-link::after,.capehdr-name,.capehdr-desc,.capehdr-cta{ transition-duration:.01ms; }
+  .capehdr-btn,.capehdr-name,.capehdr-desc,.capehdr-visual img{ transition-duration:.01ms; }
   .capehdr-fold i{ transition-duration:.01ms; }
 }

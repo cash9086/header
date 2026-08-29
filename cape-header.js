@@ -11,15 +11,17 @@
    ricarica; per essere espliciti puoi aggiungere data-css="off" al tag.
 
    COSA FA
-   - Barra sottile in alto: visibile ferma in cima e quando risali, si ritira
-     quando scendi. Sfondo scuro trasparente che cambia opacita' e tono in
-     base a cosa le passa sotto (chiaro -> piu' densa, scuro -> quasi assente).
-   - Al click su MENU l'inchiostro entra dai due lati con la fisica del
-     divider ink-bleed: fluido vero, blob, non newtoniano. I due fronti si
-     toccano al centro, sulla cucitura scatta una luce, e da li' il menu si
-     compone: i nomi da sinistra, le didascalie da destra.
-   - A menu aperto il mouse lascia una pennellata che INVERTE i colori sotto
-     di se' (mix-blend-mode: difference, come il cursore-logo del sito).
+   - Un bottone in basso al centro, con dentro solo la parola. Scendendo
+     scende sotto il bordo e sparisce, risalendo torna su. Sfondo scuro
+     trasparente che cambia opacita' e tono in base a cosa gli passa sopra
+     (chiaro -> piu' denso, scuro -> quasi assente).
+   - Al click l'inchiostro entra dai due lati con la fisica del divider
+     ink-bleed: fluido vero, blob, non newtoniano. I due fronti si toccano al
+     centro, sulla cucitura scatta una luce, e da li' il menu si compone.
+   - Il menu e' due colonne: a sinistra l'immagine, a destra le voci. Passando
+     su una voce l'immagine cambia; via dall'elenco torna il logo.
+   - Il mouse lascia una pennellata che INVERTE i colori sotto di se'
+     (mix-blend-mode: difference, come il cursore-logo del sito).
    - Niente WebGL2 / mobile / prefers-reduced-motion: stessa coreografia,
      fatta in CSS. Nessuna schermata rotta, mai.
 
@@ -43,94 +45,80 @@ var SELF = document.currentScript || null;
    Tutto quello che si cambia, si cambia qui. Sotto questo blocco c'e' solo
    meccanica: non serve aprirla per curare i testi, i link o i tempi.        */
 
-/* --- cosa c'e' scritto ---------------------------------------------------- */
-var WORDMARK = 'THE CAPE STUDIO';          /* a sinistra nella barra          */
-var OPEN_TXT = 'MENU';                     /* il bottone da chiuso            */
-var CLOSE_TXT= 'CLOSE';                    /* il bottone da aperto            */
-var HOME_URL = '#';                        /* dove porta il marchio           */
+/* --- il bottone ----------------------------------------------------------- */
+var OPEN_TXT  = 'MENU';    /* cosa c'e' scritto da chiuso                     */
+var CLOSE_TXT = 'CLOSE';   /* ...e da aperto                                  */
 
-/* Il carrello vive nella barra, accanto a MENU: e' un negozio, si vede.
-   BAG_COUNT lo aggiorni da fuori con  capeHeader.bag(n).                    */
-var BAG_ON    = true;
-var BAG_LABEL = 'BAG';
-var BAG_COUNT = 0;
-var BAG_HREF  = '#bag';
+/* --- l'immagine a riposo -------------------------------------------------
+   Quella che si vede a sinistra quando non stai sopra a nessuna voce.      */
+var LOGO = 'https://s3.amazonaws.com/webflow-prod-assets/696e3bc5b446ecf721fa3bde/6a8acf62cafcedc39ab73cc4_WhatsApp%20Image%202026-08-23%20at%2012.45.31.jpeg';
 
-/* L'indice.
-   ATTENZIONE: gli href sono SEGNAPOSTO. Mettici gli id veri delle sezioni di
-   questa pagina (#works, #editions...) o gli indirizzi delle pagine quando le
-   avrai. Un anchor che non esiste non rompe niente: il menu si chiude e basta.
-   La didascalia e' informazione, non decorazione: dice cos'e' quella voce.
-   Se non hai niente da dire, lasciala vuota ('').                           */
+/* --- le voci -------------------------------------------------------------
+   name  il titolo grande
+   desc  la sottovoce. E' informazione, non decorazione: dice cos'e' quella
+         voce. Se non hai niente da dire, lasciala vuota ('').
+   href  ATTENZIONE: sono SEGNAPOSTO. Mettici gli id veri delle sezioni di
+         questa pagina (#works, #editions...) o gli indirizzi delle pagine
+         quando le avrai. Un'ancora che non esiste non rompe niente: il menu
+         si chiude e basta.
+   img   l'immagine che compare a sinistra quando ci passi sopra. Se la
+         lasci vuota resta il logo.                                         */
 var INDEX = [
-  { name:'WORKS',       desc:'ORIGINALS ON CANVAS', href:'#works'       },
-  { name:'EDITIONS',    desc:'LIMITED PRINTS',      href:'#editions'    },
-  { name:'THE STUDIO',  desc:'PROCESS',             href:'#studio'      },
-  { name:'EXHIBITIONS', desc:'PAST & UPCOMING',     href:'#exhibitions' },
-  { name:'CONTACT',     desc:'ENQUIRIES',           href:'#contact'     }
+  { name:'WORKS',       desc:'ORIGINALS ON CANVAS', href:'#works',
+    img:'https://cdn.prod.website-files.com/696e3bc5b446ecf721fa3bde/6a91a174e835a7629e93a0ec_watermark-removed-Gemini_Generated_Image_2fk2fv2fk2fv2fk2.jpg' },
+  { name:'EDITIONS',    desc:'LIMITED PRINTS',      href:'#editions',
+    img:'https://cdn.prod.website-files.com/696e3bc5b446ecf721fa3bde/6a909a5a7fa5b28295d6a1a9_WhatsApp%20Image%202026-08-27%20at%2013.39.23%20(1).png' },
+  { name:'THE STUDIO',  desc:'PROCESS',             href:'#studio',
+    img:'https://cdn.prod.website-files.com/696e3bc5b446ecf721fa3bde/6a91a227ba3b60021d7608f9_watermark-removed-Gemini_Generated_Image_jm5yh7jm5yh7jm5y.jpg' },
+  { name:'EXHIBITIONS', desc:'PAST & UPCOMING',     href:'#exhibitions', img:'' },
+  { name:'CONTACT',     desc:'ENQUIRIES',           href:'#contact',     img:'' }
 ];
-
-/* Colonna di sinistra: come sono fatte le opere. Due righe, non di piu'. */
-var NOTE_TITLE = 'THE STUDIO';
-var NOTE_TEXT  = 'Oil, charcoal and thinned pigment on canvas. Made and shown in the studio.';
-
-/* Colonna di destra: cosa c'e' adesso. Sono le stesse tre opere del
-   carosello: il menu dice la verita' su questa pagina, non un elenco finto. */
-var SIDE_TITLE = 'CURRENT';
-var SIDE = [
-  { name:'Whisper in the Void', meta:'2024', href:'#works' },
-  { name:'Trace of a Visage',   meta:'2023', href:'#works' },
-  { name:'The Carmine Echo',    meta:'2025', href:'#works' }
-];
-var CTA      = 'ENQUIRE';       /* i prezzi sono "€ POA": si chiede, non si clicca */
-var CTA_HREF = '#contact';
-
-var FOOT_L = '© THE CAPE STUDIO';
-var FOOT_R = 'IT / EN';
 
 /* --- come si muove -------------------------------------------------------- */
-var FLOOD_MS   = 900;     /* l’inchiostro che entra dai due lati (ms)        */
-var RETREAT_MS = 620;     /* l’inchiostro che si ritira (ms)                 */
-var RISE_MS    = 620;     /* la salita/entrata di ogni voce (ms)              */
-var STAGGER    = 70;      /* ritardo tra una voce e l’altra (ms)             */
-var SEAM_AT    = 0.94;    /* a che punto del flood i due fronti si toccano    */
+var FLOOD_MS   = 900;     /* l'inchiostro che entra dai due lati (ms)        */
+var RETREAT_MS = 620;     /* l'inchiostro che si ritira (ms)                 */
+var RISE_MS    = 620;     /* l'entrata di ogni voce (ms)                     */
+var STAGGER    = 70;      /* ritardo tra una voce e l'altra (ms)             */
+var SEAM_AT    = 0.94;    /* a che punto del flood i due fronti si toccano   */
 
-/* --- la barra ------------------------------------------------------------- */
-var HIDE_ON_DOWN = true;  /* si ritira scendendo, torna risalendo             */
-var TOP_ZONE     = 48;    /* entro questi px dalla cima e’ sempre visibile   */
-var SCROLL_EPS   = 5;     /* px di scroll ignorati (evita il tremolio)        */
+/* --- il bottone che va e viene -------------------------------------------- */
+var HIDE_ON_DOWN = true;  /* scende scrollando in giu', risale scrollando in su */
+var TOP_ZONE     = 48;    /* entro questi px dalla cima e' sempre visibile   */
+var SCROLL_EPS   = 5;     /* px di scroll ignorati (evita il tremolio)       */
 
-/* --- la barra che legge lo sfondo ---------------------------------------- */
-var TONE_PROBE = true;    /* false = barra sempre uguale                      */
-var A_ON_DARK  = 0.26;    /* opacita’ del fondo barra su sfondo scuro        */
-var A_ON_LIGHT = 0.60;    /* ...e su sfondo chiaro (piu’ densa = leggibile)  */
+/* --- il bottone che legge lo sfondo --------------------------------------- */
+var TONE_PROBE = true;    /* false = bottone sempre uguale                    */
+var A_ON_DARK  = 0.30;    /* opacita' del fondo su sfondo scuro              */
+var A_ON_LIGHT = 0.62;    /* ...e su sfondo chiaro (piu' densa = leggibile)  */
 var TINT_DARK  = [16,16,19];   /* il nero-blu della notte                     */
-var TINT_LIGHT = [27,24,20];   /* su chiaro vira caldo, come l’inchiostro    */
+var TINT_LIGHT = [27,24,20];   /* su chiaro vira caldo, come l'inchiostro    */
 var MEDIA_TONE = 'dark';  /* cosa assumere sotto foto e video senza etichetta.
                              Metti data-nav-tone="light" su una sezione per
-                             dirle "qui sotto e’ chiaro".                   */
+                             dirle "qui sotto e' chiaro".                   */
 
-/* --- l’inchiostro che entra dai lati (stesso solutore di ink-bleed) ------- */
+/* --- l'inchiostro che entra dai lati (stesso solutore di ink-bleed) ------- */
 var FLOOD_AMT   = 4.20;   /* quanto colorante versano i due fronti            */
 var FLOOD_PUSH  = 0.018;  /* quanto forte spingono verso il centro. Alzalo e le
                              dita di inchiostro scappano avanti al fronte.     */
-var FLOOD_DISS  = 1.10;   /* quanto svanisce l’inchiostro che corre troppo avanti:
-                             e’ questo che tiene le dita attaccate al fronte.  */
-var FLOOD_THICK = 0.052;  /* spessore della banda che corre davanti al fronte */
-var FLOOD_ADV   = 0.545;  /* dove arriva ogni fronte a corsa finita (0.5 = meta’) */
+var FLOOD_DISS  = 1.10;   /* quanto svanisce l'inchiostro che corre troppo avanti:
+                             e' questo che tiene le dita attaccate al fronte.  */
+var FLOOD_THICK = 0.052;  /* spessore della banda che corre davanti al fronte  */
+var FLOOD_ADV   = 0.545;  /* dove arriva ogni fronte a corsa finita (0.5 = meta') */
 
 /* --- il pennello che inverte i colori ------------------------------------ */
 var BRUSH        = true;  /* false = niente pennellata                        */
 var BRUSH_ALWAYS = false; /* true = attivo anche a menu chiuso, su tutta la pagina */
-var BRUSH_R      = 0.0042;/* raggio dello splat. E’ exp(-d²/r), quindi il raggio vero
-                             e’ ~sqrt(r): 0.0042 ≈ 6% dell’altezza. Alzalo poco per volta. */
-var BRUSH_AMT    = 0.36;  /* colorante per splat: piu’ alto = pennellata piu’ larga e densa */
-var BRUSH_STEP   = 0.011; /* passo lungo il tratto: piu’ basso = tratto piu’ continuo */
-var BRUSH_PULL   = 0.40;  /* quanta velocita’ della mano passa al fluido      */
-var BRUSH_DRY    = 1.50;  /* dissipazione del colorante: piu’ alto = asciuga prima */
-var BRUSH_GRAVITY= 0.34;  /* quanto cola. E’ qui che si vede il non newtoniano:
+var BRUSH_R      = 0.0042;/* raggio dello splat. E' exp(-d^2/r), quindi il raggio
+                             vero e' ~sqrt(r): 0.0042 ~ 6% dell'altezza.      */
+var BRUSH_AMT    = 0.36;  /* colorante per splat: piu' alto = pennellata piu' larga */
+var BRUSH_STEP   = 0.011; /* passo lungo il tratto: piu' basso = tratto piu' continuo */
+var BRUSH_PULL   = 0.26;  /* quanta velocita' della mano passa al fluido. Piu' e'
+                             alto piu' l'inchiostro scappa avanti alla mano;
+                             abbassalo per tenerlo incollato al puntatore.     */
+var BRUSH_DRY    = 1.50;  /* dissipazione del colorante: piu' alto = asciuga prima */
+var BRUSH_GRAVITY= 0.34;  /* quanto cola. E' qui che si vede il non newtoniano:
                              il denso scende, il velo resta sospeso.          */
-var BRUSH_TINT   = [1.0,0.985,0.96]; /* su carta bianca l’inversione da’ nero-inchiostro */
+var BRUSH_TINT   = [1.0,0.985,0.96]; /* su carta bianca l'inversione da' nero-inchiostro */
 var WEBGL_MIN_W  = 992;   /* sotto questa larghezza: coreografia in CSS       */
 /* ========================================================================== */
 
@@ -148,38 +136,18 @@ function el(tag, cls, txt){
   return n;
 }
 
-/* ============================== LA BARRA ================================== */
-var bar = el('div','capehdr-bar is-boot');
-bar.setAttribute('role','banner');
-
-var mark = el('a','capehdr-bar__mark',WORDMARK);
-mark.href = HOME_URL;
-
-var btn = el('button','capehdr-bar__btn');
+/* ============================== IL BOTTONE ================================
+   In basso al centro. Dentro c'e' solo la parola.                        */
+var btn = el('button','capehdr-btn');
 btn.type = 'button';
 btn.setAttribute('aria-expanded','false');
 btn.setAttribute('aria-controls','capehdr-panel');
-var label = el('span','capehdr-bar__label');
+var label = el('span','capehdr-btn__label');
 label.appendChild(el('span',null,OPEN_TXT));
-var glyph = el('span','capehdr-bar__glyph');
-glyph.setAttribute('aria-hidden','true');
-glyph.appendChild(el('i')); glyph.appendChild(el('i'));
-btn.appendChild(label); btn.appendChild(glyph);
+btn.appendChild(label);
 
-var right = el('div','capehdr-bar__right');
-var bag = null;
-if(BAG_ON){
-  bag = el('a','capehdr-bar__bag');
-  bag.href = BAG_HREF;
-  bag.appendChild(el('span',null,BAG_LABEL));
-  var bagN = el('span','capehdr-bar__count',String(BAG_COUNT));
-  bag.appendChild(bagN);
-  right.appendChild(bag);
-}
-right.appendChild(btn);
-bar.appendChild(mark); bar.appendChild(right);
-
-/* ============================== IL PANNELLO =============================== */
+/* ============================== IL PANNELLO ===============================
+   Due colonne e basta: l'immagine e le voci.                             */
 var panel = el('div','capehdr-panel');
 panel.id = 'capehdr-panel';
 panel.setAttribute('role','dialog');
@@ -189,58 +157,49 @@ panel.tabIndex = -1;
 
 var grid = el('div','capehdr-grid');
 
-/* colonna sinistra: la nota */
-var colL = el('div','capehdr-col');
-colL.appendChild(el('div','capehdr-lab',NOTE_TITLE));
-colL.appendChild(el('div','capehdr-rule'));
-colL.appendChild(el('p','capehdr-note',NOTE_TEXT));
+/* --- sinistra: l'immagine. Tutte impilate e precaricate: cambiare voce e'
+       solo un'opacita' che si scambia, mai un caricamento a vista.       */
+var visual = el('div','capehdr-visual');
+visual.setAttribute('aria-hidden','true');
+var shots = [], logoShot = null;
+function shot(src){
+  var im = new Image();
+  im.decoding = 'async'; im.loading = 'eager'; im.alt = '';
+  im.src = src;
+  visual.appendChild(im);
+  return im;
+}
+if(LOGO) logoShot = shot(LOGO);
 
-/* centro: l’indice */
-var colC = el('div','capehdr-col');
-var list = el('ul','capehdr-index');
+/* --- destra: le voci --------------------------------------------------- */
+var list = el('ul','capehdr-list');
 var linkEls = [];
-var hrs = [];
-INDEX.forEach(function(it, ix){
+INDEX.forEach(function(it){
   var li = el('li','capehdr-item');
-  var hr = el('i','capehdr-hr'); li.appendChild(hr); hrs.push(hr);
-  if(ix === INDEX.length - 1){
-    var hr2 = el('i','capehdr-hr capehdr-hr--b'); li.appendChild(hr2); hrs.push(hr2);
-  }
   var a  = el('a','capehdr-link');
   a.href = it.href;
-  var nm = el('span','capehdr-name',it.name);
-  var ds = el('span','capehdr-desc',it.desc || '');
+  var nm = el('span','capehdr-name', it.name);
+  var ds = el('span','capehdr-desc', it.desc || '');
   a.appendChild(nm); a.appendChild(ds);
   li.appendChild(a); list.appendChild(li);
-  linkEls.push({ a:a, name:nm, desc:ds });
+
+  var im = it.img ? shot(it.img) : null;
+  shots.push(im);
+  if(im || logoShot){
+    a.addEventListener('mouseenter', function(){ showShot(im || logoShot); });
+    a.addEventListener('focus',      function(){ showShot(im || logoShot); });
+  }
+  linkEls.push({ a:a, name:nm, desc:ds, img:im });
 });
-colC.appendChild(list);
+list.addEventListener('mouseleave', function(){ showShot(logoShot); });
 
-/* colonna destra: la sala e l’invito */
-var colR = el('div','capehdr-col');
-colR.appendChild(el('div','capehdr-lab',SIDE_TITLE));
-colR.appendChild(el('div','capehdr-rule'));
-var sub = el('ul','capehdr-sub');
-SIDE.forEach(function(s){
-  var li = el('li');
-  var a  = el('a'); a.href = s.href;
-  a.appendChild(el('span','capehdr-sub__n', s.name));
-  if(s.meta) a.appendChild(el('span','capehdr-sub__y', s.meta));
-  li.appendChild(a); sub.appendChild(li);
-});
-colR.appendChild(sub);
-var cta = el('a','capehdr-cta',CTA);
-cta.href = CTA_HREF;
-colR.appendChild(cta);
+function showShot(im){
+  if(logoShot) logoShot.classList.toggle('is-on', im === logoShot);
+  for(var k = 0; k < shots.length; k++)
+    if(shots[k]) shots[k].classList.toggle('is-on', shots[k] === im);
+}
 
-/* piede */
-var foot = el('div','capehdr-foot');
-var footHr = el('i','capehdr-hr'); foot.appendChild(footHr); hrs.push(footHr);
-foot.appendChild(el('span',null,FOOT_L));
-foot.appendChild(el('span',null,FOOT_R));
-
-grid.appendChild(colL); grid.appendChild(colC); grid.appendChild(colR);
-grid.appendChild(foot);
+grid.appendChild(visual); grid.appendChild(list);
 panel.appendChild(grid);
 
 /* ======================== I DUE STRATI DI INCHIOSTRO ====================== */
@@ -250,34 +209,32 @@ var fold  = el('div','capehdr-fold'); fold.setAttribute('aria-hidden','true');
 fold.appendChild(el('i')); fold.appendChild(el('i'));
 var seam  = el('div','capehdr-seam'); seam.setAttribute('aria-hidden','true');
 
-/* Figli DIRETTI del body: e’ l’unico modo perche’ mix-blend-mode:difference
-   veda tutta la pagina sotto di se’ (un contenitore con z-index farebbe da
+/* Figli DIRETTI del body: e' l'unico modo perche' mix-blend-mode:difference
+   veda tutta la pagina sotto di se' (un contenitore con z-index farebbe da
    scatola chiusa e il pennello invertirebbe solo se stesso). */
 function mount(){
   d.body.appendChild(veil);
   d.body.appendChild(fold);
   d.body.appendChild(panel);
   d.body.appendChild(seam);
-  d.body.appendChild(bar);
+  d.body.appendChild(btn);
   d.body.appendChild(brush);
+  showShot(logoShot);
   requestAnimationFrame(function(){
-    requestAnimationFrame(function(){
-      bar.classList.remove('is-boot');
-      bar.classList.add('is-in');
-      shown = true;
-    });
+    requestAnimationFrame(function(){ btn.classList.add('is-in'); shown = true; });
   });
 }
 
 /* ==========================================================================
-   1 · LA BARRA CHE VA E VIENE
-   Ferma in cima -> visibile. Scendi -> si ritira. Risali -> torna.
-   A menu aperto resta ferma dov’e’: e’ l’ancora di tutta la cosa.
+   1 · IL BOTTONE CHE VA E VIENE
+   Scendi -> scende sotto il bordo e sparisce. Risali -> risale e torna.
+   In cima alla pagina c'e' sempre. A menu aperto resta dov'e': e' anche il
+   bottone per chiudere.
    ========================================================================== */
 var shown = false, lastY = 0, ticking = false, open = false;
 
-function show(){ if(!shown){ shown = true;  bar.classList.add('is-in'); } }
-function hide(){ if(shown){  shown = false; bar.classList.remove('is-in'); } }
+function show(){ if(!shown){ shown = true;  btn.classList.add('is-in'); } }
+function hide(){ if(shown){  shown = false; btn.classList.remove('is-in'); } }
 
 function onScroll(){
   if(ticking) return;
@@ -333,10 +290,12 @@ function probe(){
   var now = (window.performance && performance.now) ? performance.now() : Date.now();
   if(now - lastProbe < 180) return;
   lastProbe = now;
-  var y = bar.getBoundingClientRect().bottom + 8;
-  if(y < 0 || y > window.innerHeight) return;
-  var w = window.innerWidth;
-  toneTarget = (toneAt(w*0.14, y) + toneAt(w*0.5, y) + toneAt(w*0.86, y)) / 3;
+  var r = btn.getBoundingClientRect();
+  var y = r.top - 10;                       /* sopra il bottone: li' c'e' la pagina */
+  var vh = d.documentElement.clientHeight;
+  if(y < 0 || y > vh) return;
+  var cx = r.left + r.width/2, half = r.width/2 + 26;
+  toneTarget = (toneAt(cx - half, y) + toneAt(cx, y) + toneAt(cx + half, y)) / 3;
 }
 
 function paintBar(){
@@ -345,10 +304,10 @@ function paintBar(){
   var r = Math.round(t0[0] + (t1[0]-t0[0])*tone),
       g = Math.round(t0[1] + (t1[1]-t0[1])*tone),
       b = Math.round(t0[2] + (t1[2]-t0[2])*tone);
-  var s = bar.style;
-  s.setProperty('--ch-bar-bg',  'rgba('+r+','+g+','+b+','+a.toFixed(3)+')');
-  s.setProperty('--ch-bar-line','rgba(241,236,226,'+(0.10 + 0.09*tone).toFixed(3)+')');
-  s.setProperty('--ch-bar-ink', 'rgba(241,236,226,'+(0.86 + 0.14*tone).toFixed(3)+')');
+  var st = btn.style;
+  st.setProperty('--ch-btn-bg',  'rgba('+r+','+g+','+b+','+a.toFixed(3)+')');
+  st.setProperty('--ch-btn-line','rgba(241,236,226,'+(0.12 + 0.10*tone).toFixed(3)+')');
+  st.setProperty('--ch-btn-ink', 'rgba(241,236,226,'+(0.88 + 0.12*tone).toFixed(3)+')');
 }
 
 /* ==========================================================================
@@ -678,7 +637,9 @@ function Fluid(canvas, displayFrag, cfg){
   }
   function resize(){
     var dpr = Math.min(window.devicePixelRatio || 1, 2);
-    var cw = Math.max(1, window.innerWidth), ch = Math.max(1, window.innerHeight);
+    var box = canvas.getBoundingClientRect();
+    var cw = Math.max(1, Math.round(box.width)  || d.documentElement.clientWidth);
+    var ch = Math.max(1, Math.round(box.height) || d.documentElement.clientHeight);
     if(cw*ch*dpr*dpr > 3.5e6) dpr = Math.max(1, Math.sqrt(3.5e6/(cw*ch)));
     var w = Math.max(1, Math.round(cw*dpr)), h = Math.max(1, Math.round(ch*dpr));
     if(canvas.width !== w || canvas.height !== h){ canvas.width = w; canvas.height = h; }
@@ -864,9 +825,13 @@ var Eng = (function(){
   var pt = { x:0.5, y:0.5, lx:0.5, ly:0.5, seen:false, had:false };
   var veilLive = false;
 
+  /* Il punto va normalizzato sul rettangolo del canvas, non sulla finestra:
+     sono due cose diverse ogni volta che c'e' una scrollbar. */
   function onMove(e){
-    pt.x = e.clientX/window.innerWidth;
-    pt.y = 1 - e.clientY/window.innerHeight;
+    var r = brush.getBoundingClientRect();
+    if(r.width < 2 || r.height < 2) return;
+    pt.x = (e.clientX - r.left)/r.width;
+    pt.y = 1 - (e.clientY - r.top)/r.height;
     pt.seen = true;
   }
 
@@ -979,39 +944,17 @@ function seamFlash(){
     { duration:540, easing:'cubic-bezier(.16,1,.3,1)' });
 }
 
-function sideNodes(){
-  return [colL.children[0], colL.children[2], colR.children[0]]
-    .concat(Array.prototype.slice.call(sub.children))
-    .concat([foot.children[1], foot.children[2]]);
-}
-
-/* Il pannello e' in pagina da subito (serve il layout), ma il contenuto no:
-   va nascosto nell'istante in cui si apre, se no si vede tutto per il tempo
-   che l'inchiostro ci mette ad arrivare. Prima si arma, poi si compone. */
-var ruleAnims = [];
-function armRule(node){
-  node.style.transform = 'scaleX(0)';
-}
-function drawRule(node, delay){
-  var a = node.animate([{transform:'scaleX(0)'},{transform:'scaleX(1)'}],
-    { duration:700, delay:delay, easing:'cubic-bezier(.16,1,.3,1)', fill:'both' });
-  a.onfinish = function(){ node.style.transform = 'none'; try{ a.cancel(); }catch(e){} };
-  ruleAnims.push(a);
-}
-
+/* Le due colonne nascono dalla cucitura e si aprono verso fuori:
+   l'immagine si scopre dal suo bordo destro andando a sinistra, le voci
+   entrano da sinistra dietro il proprio bordo. Stessa direzione
+   dell'inchiostro che le ha appena portate li'. */
 function armIn(){
-  var i, side = sideNodes();
-  for(i = 0; i < linkEls.length; i++){
+  for(var i = 0; i < linkEls.length; i++){
     arm(linkEls[i].name, '-112%', '0');
-    arm(linkEls[i].desc,  '112%', '0');
+    arm(linkEls[i].desc, '-112%', '0');
   }
-  for(i = 0; i < side.length; i++) arm(side[i], '0', '112%');
-  ruleAnims.forEach(function(a){ try{ a.cancel(); }catch(e){} });
-  ruleAnims = [];
-  armRule(colL.children[1]); armRule(colR.children[1]);
-  for(i = 0; i < hrs.length; i++) armRule(hrs[i]);
-  cta.style.opacity = '0';                 /* il bottone e' un oggetto: non si avvolge */
-  cta.style.transform = 'translate3d(0,16px,0)';
+  visual.style.clipPath = 'inset(0 0 0 100%)';
+  visual.style.webkitClipPath = 'inset(0 0 0 100%)';
 }
 function arm(node, tx, ty){
   var sl = wrap(node);
@@ -1020,41 +963,33 @@ function arm(node, tx, ty){
   sl.style.opacity = '0';
 }
 
-/* Prima la pagina si riga, poi ci si scrive sopra. */
 function revealIn(){
-  var i;
-  for(i = 0; i < hrs.length; i++) drawRule(hrs[i], i*44);
-  drawRule(colL.children[1], 60);
-  drawRule(colR.children[1], 150);
-  for(i = 0; i < linkEls.length; i++){
-    enter(linkEls[i].name, '-112%', '0', 150 + i*STAGGER);
-    enter(linkEls[i].desc,  '112%', '0', 150 + i*STAGGER + 90);
+  if(REDUCED){
+    visual.style.clipPath = ''; visual.style.webkitClipPath = '';
+  }else{
+    var a = visual.animate(
+      [{ clipPath:'inset(0 0 0 100%)', webkitClipPath:'inset(0 0 0 100%)' },
+       { clipPath:'inset(0 0 0 0%)',   webkitClipPath:'inset(0 0 0 0%)' }],
+      { duration:820, easing:'cubic-bezier(.16,1,.3,1)', fill:'both' });
+    a.onfinish = function(){
+      visual.style.clipPath = ''; visual.style.webkitClipPath = '';
+      try{ a.cancel(); }catch(e){}
+    };
   }
-  var side = sideNodes();
-  for(i = 0; i < side.length; i++) enter(side[i], '0', '112%', 210 + i*58);
-  riseEl(cta, 210 + side.length*58);
-}
-
-/* il bottone sale intero: qualunque involucro gli cambierebbe la scatola */
-function riseEl(node, delay){
-  if(REDUCED){ node.style.opacity = '1'; node.style.transform = 'none'; return; }
-  var a = node.animate(
-    [{ transform:'translate3d(0,16px,0)', opacity:0 },
-     { transform:'translate3d(0,0,0)',    opacity:1 }],
-    { duration:RISE_MS, delay:delay, easing:'cubic-bezier(.16,1,.3,1)', fill:'both' });
-  a.onfinish = function(){ node.style.opacity = '1'; node.style.transform = 'none'; try{ a.cancel(); }catch(e){} };
+  for(var i = 0; i < linkEls.length; i++){
+    enter(linkEls[i].name, '-112%', '0', 120 + i*STAGGER);
+    enter(linkEls[i].desc, '-112%', '0', 120 + i*STAGGER + 80);
+  }
 }
 
 function revealOut(){
   var i, n = linkEls.length;
   for(i = 0; i < n; i++){
     leave(linkEls[n-1-i].name, '-70%', '0', i*26);
-    leave(linkEls[n-1-i].desc,  '70%', '0', i*26);
+    leave(linkEls[n-1-i].desc, '-70%', '0', i*26);
   }
-  var side = sideNodes();
-  for(i = 0; i < side.length; i++) leave(side[i], '0', '70%', i*20);
-  if(!REDUCED) cta.animate([{opacity:1},{opacity:0}],
-    { duration:200, easing:'cubic-bezier(.76,0,.24,1)', fill:'both' });
+  if(!REDUCED) visual.animate([{opacity:1},{opacity:0}],
+    { duration:260, easing:'cubic-bezier(.76,0,.24,1)', fill:'both' });
 }
 
 /* ------------------------------------------------------------------ APRI -- */
@@ -1064,8 +999,11 @@ function openMenu(){
   clearTimers();
 
   panel.classList.add('is-on');
+  visual.style.opacity = '';               /* la chiusura la sbiadisce: qui torna intera */
+  visual.getAnimations().forEach(function(a){ try{ a.cancel(); }catch(e){} });
+  showShot(logoShot);                      /* si riapre sempre sul logo */
   armIn();                                  /* prima si arma, poi si compone */
-  bar.classList.add('is-open');
+  btn.classList.add('is-open');
   btn.setAttribute('aria-expanded','true');
   swapLabel(CLOSE_TXT);
   lock(true);
@@ -1112,7 +1050,8 @@ function closeMenu(){
 
   at(230 + back + 60, function(){
     panel.classList.remove('is-on');
-    bar.classList.remove('is-open');
+    btn.classList.remove('is-open');
+    lock(false);                           /* senza questa la pagina resta ferma */
     busy = false;
     paintBar();
     try{ btn.focus({preventScroll:true}); }catch(e){ btn.focus(); }
@@ -1122,7 +1061,7 @@ function closeMenu(){
 function toggle(){ open ? closeMenu() : openMenu(); }
 
 function paintOpenBar(){                 /* su carta bianca si scrive in inchiostro */
-  bar.style.setProperty('--ch-bar-ink','rgba(37,42,34,.92)');
+  btn.style.setProperty('--ch-btn-ink','rgba(37,42,34,.92)');
 }
 
 /* ==========================================================================
@@ -1230,11 +1169,7 @@ function init(){
 
   if(BRUSH_ALWAYS && BRUSH && HOVERS && canGL){ Ink.build(); glOn = !!Ink.veil(); Eng.brushOn(); }
 
-  /* Da fuori: capeHeader.bag(3) aggiorna il numero nel carrello. */
-  window.capeHeader = {
-    open:openMenu, close:closeMenu, toggle:toggle,
-    bag:function(n){ if(bag) bag.lastChild.textContent = String(n); }
-  };
+  window.capeHeader = { open:openMenu, close:closeMenu, toggle:toggle };
 }
 
 /* ==========================================================================

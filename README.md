@@ -76,5 +76,8 @@ I link delle voci (`#works`, `#editions`, ...) sono **segnaposto**: vanno
 puntati agli id veri delle sezioni, o agli indirizzi delle pagine. Un'ancora
 che non esiste non rompe niente — il menu si chiude e basta.
 
-Da fuori si puo' chiamare `capeHeader.open()`, `.close()`, `.toggle()` e
-`.bag(n)` per il numero nel carrello.
+Le immagini stanno nell'array `INDEX`, una per voce, piu' `LOGO` per quella a
+riposo. Una voce senza immagine tiene il logo. Sono precaricate: cambiare
+voce e' solo un'opacita' che si scambia.
+
+Da fuori si puo' chiamare `capeHeader.open()`, `.close()` e `.toggle()`.
