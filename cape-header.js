@@ -165,6 +165,13 @@ var shots = [], logoShot = null;
 function shot(src){
   var im = new Image();
   im.decoding = 'async'; im.loading = 'eager'; im.alt = '';
+  /* Se un URL e' sbagliato non deve restare l'icona di immagine rotta in
+     mezzo al menu: quell'immagine sparisce e la voce si tiene il logo. */
+  im.onerror = function(){
+    im._dead = true;
+    im.style.display = 'none';
+    if(im.classList.contains('is-on')) showShot(logoShot && !logoShot._dead ? logoShot : null);
+  };
   im.src = src;
   visual.appendChild(im);
   return im;
@@ -186,13 +193,17 @@ INDEX.forEach(function(it){
   var im = it.img ? shot(it.img) : null;
   shots.push(im);
   if(im || logoShot){
-    a.addEventListener('mouseenter', function(){ showShot(im || logoShot); });
-    a.addEventListener('focus',      function(){ showShot(im || logoShot); });
+    a.addEventListener('mouseenter', function(){ showShot(pick(im)); });
+    a.addEventListener('focus',      function(){ showShot(pick(im)); });
   }
   linkEls.push({ a:a, name:nm, desc:ds, img:im });
 });
-list.addEventListener('mouseleave', function(){ showShot(logoShot); });
+list.addEventListener('mouseleave', function(){ showShot(pick(null)); });
 
+function pick(im){                     /* la voce senza immagine (o rotta) tiene il logo */
+  if(im && !im._dead) return im;
+  return (logoShot && !logoShot._dead) ? logoShot : null;
+}
 function showShot(im){
   if(logoShot) logoShot.classList.toggle('is-on', im === logoShot);
   for(var k = 0; k < shots.length; k++)
@@ -219,7 +230,7 @@ function mount(){
   d.body.appendChild(seam);
   d.body.appendChild(btn);
   d.body.appendChild(brush);
-  showShot(logoShot);
+  showShot(pick(null));
   requestAnimationFrame(function(){
     requestAnimationFrame(function(){ btn.classList.add('is-in'); shown = true; });
   });
@@ -290,11 +301,16 @@ function probe(){
   var now = (window.performance && performance.now) ? performance.now() : Date.now();
   if(now - lastProbe < 180) return;
   lastProbe = now;
-  var r = btn.getBoundingClientRect();
-  var y = r.top - 10;                       /* sopra il bottone: li' c'e' la pagina */
+  /* Si misura sul box di layout, non su getBoundingClientRect: quello segue
+     la transform, e mentre il bottone e' sceso fuori schermo la sonda
+     smetterebbe di leggere. Il bottone e' position:fixed, quindi offsetLeft
+     e offsetTop sono gia' relativi al viewport e la transform non li tocca.
+     Con left:50% + translateX(-50%), offsetLeft e' proprio il centro. */
+  var cx = btn.offsetLeft, w = btn.offsetWidth || 90;
+  var y  = btn.offsetTop - 10;              /* sopra il bottone: li' c'e' la pagina */
   var vh = d.documentElement.clientHeight;
   if(y < 0 || y > vh) return;
-  var cx = r.left + r.width/2, half = r.width/2 + 26;
+  var half = w/2 + 26;
   toneTarget = (toneAt(cx - half, y) + toneAt(cx, y) + toneAt(cx + half, y)) / 3;
 }
 
@@ -1001,7 +1017,7 @@ function openMenu(){
   panel.classList.add('is-on');
   visual.style.opacity = '';               /* la chiusura la sbiadisce: qui torna intera */
   visual.getAnimations().forEach(function(a){ try{ a.cancel(); }catch(e){} });
-  showShot(logoShot);                      /* si riapre sempre sul logo */
+  showShot(pick(null));                    /* si riapre sempre sul logo */
   armIn();                                  /* prima si arma, poi si compone */
   btn.classList.add('is-open');
   btn.setAttribute('aria-expanded','true');
