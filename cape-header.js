@@ -4,7 +4,7 @@
    nulla nel Designer, nessun elemento da creare, nessuna classe da aggiungere.
 
    Va in fondo al footer della pagina, DOPO Lenis:
-     <script defer src="https://cdn.jsdelivr.net/gh/cash9086/header@v1.0.0/cape-header.js"></script>
+     <script defer src="https://cdn.jsdelivr.net/gh/cash9086/header@VERSIONE/cape-header.js"></script>
 
    Il CSS se lo carica da solo dalla stessa cartella. Se lo hai gia' messo tu
    nell'<head> (meglio: un viaggio in meno), il file se ne accorge e non lo

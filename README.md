@@ -16,14 +16,14 @@ Due file, nessuna dipendenza, niente da creare nel Designer.
 *Inside `<head>` tag*, in fondo a quello che c'e' gia':
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/cash9086/header@v1.0.0/cape-header.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/cash9086/header@VERSIONE/cape-header.css">
 ```
 
 **In fondo al footer** — Settings → Custom code → *Before `</body>` tag*,
 come ultima riga, dopo Lenis:
 
 ```html
-<script defer src="https://cdn.jsdelivr.net/gh/cash9086/header@v1.0.0/cape-header.js"></script>
+<script defer src="https://cdn.jsdelivr.net/gh/cash9086/header@VERSIONE/cape-header.js"></script>
 ```
 
 `defer` garantisce che parta dopo tutti gli script inline del footer, quindi
@@ -44,21 +44,27 @@ con `data-css="off"` sul tag `<script>`.
 
 ## Versioni
 
-L'URL punta a un **tag**, non a un branch: il contenuto di
-`@v1.0.0` non cambiera' mai, quindi la cache di jsDelivr non e' mai un
-problema e non serve svuotare niente.
+`VERSIONE` nei due URL e' una di queste due cose:
 
-Per pubblicare una modifica: commit, tag nuovo (`v1.0.1`), e cambi la
-versione nei due tag HTML. Sono due stringhe.
+- **lo SHA di un commit** — `@d490afb...`, quaranta caratteri, copiabile dalla
+  pagina dei commit. E' immutabile: quel contenuto non cambiera' mai, quindi
+  la cache di jsDelivr non e' mai un problema e non c'e' niente da svuotare.
+  E' la forma che usiamo adesso.
+- **un tag** — `@v1.0.0`, piu' leggibile, stessa identica garanzia. Il push
+  dei tag da questa sessione non passa, quindi il tag va creato a mano:
+  Releases → Draft a new release → Choose a tag → scrivi `v1.0.0` → Create new
+  tag → Publish release. Fatto quello, l'URL con `@v1.0.0` funziona subito.
 
-Mentre si lavora si puo' puntare a un branch (`@main`) e svuotare la cache a
+Per pubblicare una modifica: commit su `main`, poi cambi `VERSIONE` nelle due
+righe con il nuovo SHA (o fai un tag nuovo).
+
+Mentre si lavora si puo' puntare al branch (`@main`) e svuotare la cache a
 mano aprendo una volta
 `https://purge.jsdelivr.net/gh/cash9086/header@main/cape-header.js`.
-Comodo in sviluppo, da non lasciare in produzione.
+Comodo in sviluppo, da non lasciare in produzione: senza purge una modifica
+puo' metterci ore ad arrivare.
 
 Il repo deve restare **pubblico**: jsDelivr non serve repo privati.
-
----
 
 ## Dove si mette mano
 

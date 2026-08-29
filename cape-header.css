@@ -3,7 +3,7 @@
    Barra + menu a tutto schermo per la pagina The Cape Studio.
 
    Va nell'<head> della pagina:
-     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/cash9086/header@v1.0.0/cape-header.css">
+     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/cash9086/header@VERSIONE/cape-header.css">
 
    Se non lo metti, cape-header.js se lo tira dietro da solo dalla stessa
    cartella — funziona uguale, ma con un viaggio di rete in piu'.
