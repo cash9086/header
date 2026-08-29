@@ -117,12 +117,11 @@ var FLOOD_DAB_V = 0.090;  /* quanta velocita' la mano passa al fluido: e' questo
 /* --- il pennello che inverte i colori ------------------------------------ */
 var BRUSH        = true;  /* false = niente pennellata                        */
 var BRUSH_ALWAYS = false; /* true = attivo anche a menu chiuso, su tutta la pagina */
-var BRUSH_R      = 0.00076;/* raggio dello splat. E' exp(-d^2/r), quindi il raggio
+var BRUSH_R      = 0.00049;/* raggio dello splat. E' exp(-d^2/r), quindi il raggio
                              vero e' ~sqrt(r): per cambiarlo di un fattore k si
-                             moltiplica r per k al quadrato. Questo e' il valore
-                             dimezzato, meno un altro 15%: ~2.5% dell'altezza. */
+                             moltiplica r per k al quadrato. ~2.2% dell'altezza. */
 var BRUSH_AMT    = 0.36;  /* colorante per splat: piu' alto = pennellata piu' larga */
-var BRUSH_STEP   = 0.005; /* passo lungo il tratto: va tenuto sotto al raggio,
+var BRUSH_STEP   = 0.004; /* passo lungo il tratto: va tenuto sotto al raggio,
                              se no un pennello piccolo lascia una fila di punti */
 var BRUSH_PULL   = 0.26;  /* quanta velocita' della mano passa al fluido. Piu' e'
                              alto piu' l'inchiostro scappa avanti alla mano;
