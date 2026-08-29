@@ -46,8 +46,8 @@ var SELF = document.currentScript || null;
    meccanica: non serve aprirla per curare i testi, i link o i tempi.        */
 
 /* --- il bottone ----------------------------------------------------------- */
-var OPEN_TXT  = 'MENU';    /* cosa c'e' scritto da chiuso                     */
-var CLOSE_TXT = 'CLOSE';   /* ...e da aperto                                  */
+var OPEN_TXT  = 'MENU';    /* cosa c'e' scritto nel bottone in basso          */
+var CLOSE_LBL = 'Chiudi il menu';  /* etichetta della X, per chi non vede      */
 
 /* --- l'immagine a riposo -------------------------------------------------
    Quella che si vede a sinistra quando non stai sopra a nessuna voce.      */
@@ -75,11 +75,11 @@ var INDEX = [
 ];
 
 /* --- come si muove -------------------------------------------------------- */
-var FLOOD_MS   = 780;     /* il pennello che dipinge lo schermo (ms)        */
-var RETREAT_MS = 700;     /* il pennello che lo ripulisce (ms)              */
+var FLOOD_MS   = 1400;    /* il pennello che dipinge lo schermo (ms)        */
+var RETREAT_MS = 1150;    /* il pennello che lo ripulisce (ms)              */
 var RISE_MS    = 620;     /* l'entrata di ogni voce (ms)                     */
 var STAGGER    = 70;      /* ritardo tra una voce e l'altra (ms)             */
-var SEAM_AT    = 0.94;    /* a che punto del flood i due fronti si toccano   */
+var SEAM_AT    = 0.86;    /* a che punto della pennellata entra il contenuto */
 
 /* --- il bottone che va e viene -------------------------------------------- */
 var HIDE_ON_DOWN = true;  /* scende scrollando in giu', risale scrollando in su */
@@ -99,9 +99,14 @@ var FLOOD_DISS  = 2.00;   /* quanto svanisce l'inchiostro che corre troppo avant
                              e' questo che tiene le dita attaccate al fronte.  */
 var FLOOD_THICK = 0.052;  /* spessore della banda che corre davanti al fronte  */
 var FLOOD_ADV   = 1.06;   /* quanto corre il fronte: >1 per chiudere gli angoli */
-var FLOOD_DABS  = 2;      /* pennellate per frame lungo il fronte: 0 = fronte liscio */
-var FLOOD_DAB_R = 0.010;  /* quanto e' grossa ogni pennellata                 */
-var FLOOD_DAB_A = 0.55;   /* quanto colorante lascia                          */
+var FLOOD_DABS  = 5;      /* quante impronte al massimo per frame lungo il tratto
+                             percorso dalla mano. 0 = fronte liscio, senza pennello */
+var FLOOD_DAB_R = 0.014;  /* quanto e' larga la setola                         */
+var FLOOD_DAB_A = 0.30;   /* quanto colorante lascia ogni impronta            */
+var FLOOD_SWEEP = 2.60;   /* passate al secondo: la mano va avanti e indietro
+                             lungo il fronte, come chi pittura un muro         */
+var FLOOD_DAB_V = 0.055;  /* quanta velocita' la mano passa al fluido: e' questo
+                             che smaccia l'inchiostro nel verso della passata  */
 
 /* --- il pennello che inverte i colori ------------------------------------ */
 var BRUSH        = true;  /* false = niente pennellata                        */
@@ -140,9 +145,14 @@ var btn = el('button','capehdr-btn');
 btn.type = 'button';
 btn.setAttribute('aria-expanded','false');
 btn.setAttribute('aria-controls','capehdr-panel');
-var label = el('span','capehdr-btn__label');
-label.appendChild(el('span',null,OPEN_TXT));
-btn.appendChild(label);
+btn.appendChild(el('span','capehdr-btn__label', OPEN_TXT));
+
+/* Per chiudere: una X in alto a destra. Compare a menu aperto, e in quel
+   momento il bottone in basso se ne va — mai due comandi insieme. */
+var xBtn = el('button','capehdr-x');
+xBtn.type = 'button';
+xBtn.setAttribute('aria-label', CLOSE_LBL);
+xBtn.appendChild(el('i')); xBtn.appendChild(el('i'));
 
 /* ============================== IL PANNELLO ===============================
    Due colonne e basta: l'immagine e le voci.                             */
@@ -227,6 +237,7 @@ function mount(){
   d.body.appendChild(panel);
   d.body.appendChild(seam);
   d.body.appendChild(btn);
+  d.body.appendChild(xBtn);
   d.body.appendChild(brush);
   showShot(pick(null));
   requestAnimationFrame(function(){
@@ -260,32 +271,6 @@ function onScroll(){
     }
     lastY = y;
   });
-}
-
-/* ==========================================================================
-   2 · IL BOTTONE: MENU -> CLOSE, lettera per lettera
-   ========================================================================== */
-function swapLabel(text){
-  var old = label.firstElementChild;
-  var neu = el('span');
-  for(var i = 0; i < text.length; i++) neu.appendChild(el('span', null, text[i]));
-  neu.style.position = 'absolute'; neu.style.left = '0'; neu.style.top = '0';
-  label.appendChild(neu);
-  label.style.width = ''; label.style.width = Math.max(old.offsetWidth, neu.offsetWidth) + 'px';
-
-  if(REDUCED){ label.removeChild(old); neu.style.position = 'static'; return; }
-
-  var kids = neu.children, i2;
-  for(i2 = 0; i2 < kids.length; i2++){
-    kids[i2].animate([{transform:'translateY(105%)'},{transform:'translateY(0)'}],
-      { duration:420, delay:i2*22, easing:'cubic-bezier(.16,1,.3,1)', fill:'both' });
-  }
-  old.animate([{transform:'translateY(0)'},{transform:'translateY(-105%)'}],
-    { duration:320, easing:'cubic-bezier(.76,0,.24,1)', fill:'both' })
-    .onfinish = function(){
-      if(old.parentNode) label.removeChild(old);
-      neu.style.position = 'static';
-    };
 }
 
 /* ==========================================================================
@@ -843,7 +828,7 @@ var Eng = (function(){
       if(V && veilLive){
         if(feeding){
           V.edge(1/60, p, FLOOD_AMT, FLOOD_PUSH, FLOOD_THICK, FLOOD_ADV);
-          dabs(V, p);
+          dabs(V, p, 1/60);
         }
         V.step(1/60);
       }
@@ -878,17 +863,45 @@ var Eng = (function(){
   /* Le pennellate che corrono lungo il fronte: e' questo che fa sembrare una
      mano che dipinge invece di una tenda che si chiude. Il punto si pesca
      sulla retta a 45 gradi che in questo istante e' il fronte. */
-  function dabs(F, prog){
+  var hand = 0, handDir = 1, prevDab = null, handSp = 1;
+  function dabs(F, prog, dt){
     if(FLOOD_DABS <= 0) return;
     var L = prog*FLOOD_ADV;
+    /* il fronte a 45 gradi, in questo istante, va da (lo, ...) a (hi, ...) */
     var lo = Math.max(0, 2*L - 1), hi = Math.min(1, 2*L);
-    if(hi <= lo) return;
-    for(var k = 0; k < FLOOD_DABS; k++){
-      var x = lo + Math.random()*(hi - lo);
-      var y = x - 2*L + 1;
-      if(y < -0.05 || y > 1.05) continue;
-      F.splat(x, y, FLOOD_PUSH*0.7071, -FLOOD_PUSH*0.7071, FLOOD_DAB_A, FLOOD_DAB_R, 0);
+    if(hi - lo < 1e-4){ prevDab = null; return; }
+
+    /* La mano corre avanti e indietro lungo il fronte invece di picchiettare
+       a caso: e' la differenza fra una pennellata e del rumore. */
+    hand += handDir * FLOOD_SWEEP * handSp * dt;
+    /* a ogni inversione la mano cambia un po' passo: due passate non escono
+       mai identiche, e il fronte non fa il gradino sempre nello stesso punto */
+    if(hand >= 1){ hand = 1; handDir = -1; handSp = 0.78 + Math.random()*0.5; }
+    else if(hand <= 0){ hand = 0; handDir = 1; handSp = 0.78 + Math.random()*0.5; }
+
+    var x = lo + hand*(hi - lo);
+    var y = x - 2*L + 1;
+    if(y < -0.08 || y > 1.08){ prevDab = null; return; }
+
+    /* Due velocita' sommate: la passata lungo il fronte (0.707, 0.707) e
+       l'avanzamento sulla diagonale (0.707, -0.707). E' la seconda che fa
+       avanzare l'inchiostro, la prima che lo smaccia di traverso. */
+    var vx = handDir*0.7071*FLOOD_DAB_V + 0.7071*FLOOD_PUSH;
+    var vy = handDir*0.7071*FLOOD_DAB_V - 0.7071*FLOOD_PUSH;
+
+    /* impronte interpolate fra dove era la mano e dove e' adesso: il tratto
+       resta continuo anche se il frame e' saltato */
+    var px = prevDab ? prevDab[0] : x, py = prevDab ? prevDab[1] : y;
+    var dx = x - px, dy = y - py;
+    var n = Math.max(1, Math.min(FLOOD_DABS, Math.round(Math.sqrt(dx*dx + dy*dy)/0.012)));
+    for(var k = 1; k <= n; k++){
+      var u = k/n;
+      /* setola disuguale: ogni impronta ha il suo carico e la sua larghezza */
+      F.splat(px + dx*u, py + dy*u, vx, vy,
+              FLOOD_DAB_A*(0.72 + Math.random()*0.56),
+              FLOOD_DAB_R*(0.80 + Math.random()*0.45), 0);
     }
+    prevDab = [x, y];
   }
 
   return {
@@ -899,6 +912,7 @@ var Eng = (function(){
       erase = isErase ? 1 : 0;
       p = 0; dur = Math.max(1, ms); t0 = nowMs();
       moving = true; arrive = done || null; veilLive = true;
+      hand = 0; handDir = 1; handSp = 1; prevDab = null;  /* la mano riparte da capo */
       veil.style.display = 'block';
       kick();
     },
@@ -985,13 +999,13 @@ function openMenu(){
   clearTimers();
 
   panel.classList.add('is-on');
+  btn.classList.remove('is-in');           /* il bottone se ne va: chiude la X */
   visual.style.opacity = '';               /* la chiusura la sbiadisce: qui torna intera */
   visual.getAnimations().forEach(function(a){ try{ a.cancel(); }catch(e){} });
   showShot(pick(null));                    /* si riapre sempre sul logo */
   armIn();                                  /* prima si arma, poi si compone */
   btn.classList.add('is-open');
   btn.setAttribute('aria-expanded','true');
-  swapLabel(CLOSE_TXT);
   lock(true);
 
   var flood = REDUCED ? 1 : FLOOD_MS;
@@ -1007,7 +1021,11 @@ function openMenu(){
   }
 
   at(flood*SEAM_AT,      seamFlash);
-  at(flood*SEAM_AT + 30, function(){ revealIn(); busy = false; focusFirst(); });
+  at(flood*SEAM_AT + 30, function(){
+    revealIn(); busy = false; focusFirst();
+    xBtn.classList.add('is-on');
+    requestAnimationFrame(function(){ xBtn.classList.add('is-in'); });
+  });
   if(BRUSH && HOVERS && glOn) at(flood*SEAM_AT + 140, function(){ Eng.brushOn(); });
 }
 
@@ -1018,7 +1036,8 @@ function closeMenu(){
   clearTimers();
 
   btn.setAttribute('aria-expanded','false');
-  swapLabel(OPEN_TXT);
+  xBtn.classList.remove('is-in');
+  at(500, function(){ xBtn.classList.remove('is-on'); });
   if(!BRUSH_ALWAYS) Eng.brushOff();
   revealOut();
 
@@ -1044,6 +1063,7 @@ function closeMenu(){
     panel.classList.remove('is-on');
     btn.classList.remove('is-open');
     lock(false);                           /* senza questa la pagina resta ferma */
+    shown = true; btn.classList.add('is-in');   /* e il bottone torna al suo posto */
     busy = false;
     try{ btn.focus({preventScroll:true}); }catch(e){ btn.focus(); }
   });
@@ -1094,7 +1114,7 @@ function focusFirst(){
 d.addEventListener('keydown', function(e){
   if(!open || e.key !== 'Tab') return;
   var f = focusables(); if(!f.length) return;
-  f = f.concat([btn]);
+  f = f.concat([xBtn]);
   var first = f[0], last = f[f.length - 1];
   if(e.shiftKey && d.activeElement === first){ e.preventDefault(); last.focus(); }
   else if(!e.shiftKey && d.activeElement === last){ e.preventDefault(); first.focus(); }
@@ -1128,6 +1148,7 @@ function init(){
   mount();
   anchors();
   btn.addEventListener('click', function(e){ e.preventDefault(); toggle(); });
+  xBtn.addEventListener('click', function(e){ e.preventDefault(); closeMenu(); });
 
   lastY = window.pageYOffset || 0;
   window.addEventListener('scroll', onScroll, {passive:true});

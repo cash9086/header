@@ -7,7 +7,10 @@ Un bottone in basso al centro, con dentro solo la parola: scendendo sparisce
 sotto il bordo, risalendo torna. Non ha un colore suo — sta in
 `mix-blend-mode: difference`, quindi e' sempre il negativo esatto di quello
 che ha sotto, pixel per pixel, e la scritta resta leggibile su qualunque cosa
-gli passi sopra.
+gli passi sopra. A menu aperto il bottone se ne va e al suo posto compare una
+X in alto a destra: non ci sono mai due comandi insieme.
+
+Tutto il testo e' Jost 200 — voci, sottovoci e bottone.
 
 Al click un pennello dipinge lo schermo in diagonale, da in alto a sinistra a
 in basso a destra, con la fisica dell'`ink-bleed`. In uscita fa la stessa
