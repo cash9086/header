@@ -75,8 +75,8 @@ var INDEX = [
 ];
 
 /* --- come si muove -------------------------------------------------------- */
-var FLOOD_MS   = 900;     /* l'inchiostro che entra dai due lati (ms)        */
-var RETREAT_MS = 620;     /* l'inchiostro che si ritira (ms)                 */
+var FLOOD_MS   = 780;     /* il pennello che dipinge lo schermo (ms)        */
+var RETREAT_MS = 700;     /* il pennello che lo ripulisce (ms)              */
 var RISE_MS    = 620;     /* l'entrata di ogni voce (ms)                     */
 var STAGGER    = 70;      /* ritardo tra una voce e l'altra (ms)             */
 var SEAM_AT    = 0.94;    /* a che punto del flood i due fronti si toccano   */
@@ -86,24 +86,22 @@ var HIDE_ON_DOWN = true;  /* scende scrollando in giu', risale scrollando in su 
 var TOP_ZONE     = 48;    /* entro questi px dalla cima e' sempre visibile   */
 var SCROLL_EPS   = 5;     /* px di scroll ignorati (evita il tremolio)       */
 
-/* --- il bottone che legge lo sfondo --------------------------------------- */
-var TONE_PROBE = true;    /* false = bottone sempre uguale                    */
-var A_ON_DARK  = 0.30;    /* opacita' del fondo su sfondo scuro              */
-var A_ON_LIGHT = 0.62;    /* ...e su sfondo chiaro (piu' densa = leggibile)  */
-var TINT_DARK  = [16,16,19];   /* il nero-blu della notte                     */
-var TINT_LIGHT = [27,24,20];   /* su chiaro vira caldo, come l'inchiostro    */
-var MEDIA_TONE = 'dark';  /* cosa assumere sotto foto e video senza etichetta.
-                             Metti data-nav-tone="light" su una sezione per
-                             dirle "qui sotto e' chiaro".                   */
-
+/* --- l'inchiostro: il pennello che dipinge lo schermo --------------------
+   Un fronte a 45 gradi che va da in alto a sinistra a in basso a destra, con
+   sopra delle pennellate vere che gli corrono davanti. L'uscita fa la stessa
+   identica cosa nella stessa direzione: non torna indietro, ricomincia da in
+   alto a sinistra e finisce in basso a destra.                             */
 /* --- l'inchiostro che entra dai lati (stesso solutore di ink-bleed) ------- */
-var FLOOD_AMT   = 4.20;   /* quanto colorante versano i due fronti            */
+var FLOOD_AMT   = 3.60;   /* quanto colorante versano i due fronti            */
 var FLOOD_PUSH  = 0.018;  /* quanto forte spingono verso il centro. Alzalo e le
                              dita di inchiostro scappano avanti al fronte.     */
-var FLOOD_DISS  = 1.10;   /* quanto svanisce l'inchiostro che corre troppo avanti:
+var FLOOD_DISS  = 2.00;   /* quanto svanisce l'inchiostro che corre troppo avanti:
                              e' questo che tiene le dita attaccate al fronte.  */
 var FLOOD_THICK = 0.052;  /* spessore della banda che corre davanti al fronte  */
-var FLOOD_ADV   = 0.545;  /* dove arriva ogni fronte a corsa finita (0.5 = meta') */
+var FLOOD_ADV   = 1.06;   /* quanto corre il fronte: >1 per chiudere gli angoli */
+var FLOOD_DABS  = 2;      /* pennellate per frame lungo il fronte: 0 = fronte liscio */
+var FLOOD_DAB_R = 0.010;  /* quanto e' grossa ogni pennellata                 */
+var FLOOD_DAB_A = 0.55;   /* quanto colorante lascia                          */
 
 /* --- il pennello che inverte i colori ------------------------------------ */
 var BRUSH        = true;  /* false = niente pennellata                        */
@@ -261,69 +259,7 @@ function onScroll(){
       else if(dy < -SCROLL_EPS)    show();
     }
     lastY = y;
-    if(TONE_PROBE && !open) probe(y);
   });
-}
-
-/* ----- la barra legge cosa le passa sotto ---------------------------------
-   Guarda tre punti appena sotto il proprio bordo, risale il DOM fino al primo
-   sfondo vero e ne misura la luminosita’. Sotto foto e video non puo’ leggere
-   i pixel: usa l’etichetta data-nav-tone della sezione, o MEDIA_TONE.       */
-var tone = 0, toneTarget = 0, lastProbe = 0;
-
-function rgbOf(str){
-  var m = /rgba?\(([^)]+)\)/.exec(str || '');
-  if(!m) return null;
-  var p = m[1].split(',').map(parseFloat);
-  return { r:p[0], g:p[1], b:p[2], a:(p.length > 3 ? p[3] : 1) };
-}
-
-function toneAt(x, y){
-  var node = d.elementFromPoint(x, y);
-  while(node && node !== d.documentElement){
-    if(node.hasAttribute && node.hasAttribute('data-nav-tone'))
-      return node.getAttribute('data-nav-tone') === 'light' ? 1 : 0;
-    var cs = getComputedStyle(node);
-    if(node.tagName === 'VIDEO' || node.tagName === 'IMG' ||
-       (cs.backgroundImage && cs.backgroundImage !== 'none'))
-      return MEDIA_TONE === 'light' ? 1 : 0;
-    var c = rgbOf(cs.backgroundColor);
-    if(c && c.a > 0.15){
-      var lum = (0.2126*c.r + 0.7152*c.g + 0.0722*c.b) / 255;
-      return Math.max(0, Math.min(1, (lum - 0.30) / 0.34));
-    }
-    node = node.parentElement;
-  }
-  return 1;                                   /* niente sfondo = carta bianca */
-}
-
-function probe(){
-  var now = (window.performance && performance.now) ? performance.now() : Date.now();
-  if(now - lastProbe < 180) return;
-  lastProbe = now;
-  /* Si misura sul box di layout, non su getBoundingClientRect: quello segue
-     la transform, e mentre il bottone e' sceso fuori schermo la sonda
-     smetterebbe di leggere. Il bottone e' position:fixed, quindi offsetLeft
-     e offsetTop sono gia' relativi al viewport e la transform non li tocca.
-     Con left:50% + translateX(-50%), offsetLeft e' proprio il centro. */
-  var cx = btn.offsetLeft, w = btn.offsetWidth || 90;
-  var y  = btn.offsetTop - 10;              /* sopra il bottone: li' c'e' la pagina */
-  var vh = d.documentElement.clientHeight;
-  if(y < 0 || y > vh) return;
-  var half = w/2 + 26;
-  toneTarget = (toneAt(cx - half, y) + toneAt(cx, y) + toneAt(cx + half, y)) / 3;
-}
-
-function paintBar(){
-  var a  = A_ON_DARK + (A_ON_LIGHT - A_ON_DARK) * tone;
-  var t0 = TINT_DARK, t1 = TINT_LIGHT;
-  var r = Math.round(t0[0] + (t1[0]-t0[0])*tone),
-      g = Math.round(t0[1] + (t1[1]-t0[1])*tone),
-      b = Math.round(t0[2] + (t1[2]-t0[2])*tone);
-  var st = btn.style;
-  st.setProperty('--ch-btn-bg',  'rgba('+r+','+g+','+b+','+a.toFixed(3)+')');
-  st.setProperty('--ch-btn-line','rgba(241,236,226,'+(0.12 + 0.10*tone).toFixed(3)+')');
-  st.setProperty('--ch-btn-ink', 'rgba(241,236,226,'+(0.88 + 0.12*tone).toFixed(3)+')');
 }
 
 /* ==========================================================================
@@ -496,35 +432,46 @@ var CLEAR = HEAD + 'uniform sampler2D uTexture; uniform float uValue;\n' +
    con il labbro sporcato dallo stesso rumore a tre ottave. */
 var EDGE = HEAD + RND + 'uniform sampler2D uTarget; uniform vec3 uValue;\n' +
   'uniform float uP, uTime, uThick, uMode, uPush, uAdv;\n' +
-  'void main(){ float Y = vUv.y*2.4;\n' +
-  '  float nL = 0.55*n11(Y*3.1 + uTime*0.07) + 0.30*n11(Y*7.0 - uTime*0.05) + 0.15*n11(Y*13.0);\n' +
-  '  float nR = 0.55*n11(Y*3.1 + 41.0 - uTime*0.06) + 0.30*n11(Y*7.0 + 17.0 + uTime*0.04) + 0.15*n11(Y*13.0 + 5.0);\n' +
-  '  float lipL = uP*uAdv + (nL-0.5)*uThick*2.0;\n' +
-  '  float lipR = 1.0 - (uP*uAdv + (nR-0.5)*uThick*2.0);\n' +
-  '  float dL = (vUv.x - lipL)/uThick, dR = (vUv.x - lipR)/uThick;\n' +
-  '  float runL = exp(-dL*dL), runR = exp(-dR*dR);\n' +
-  '  float resv = smoothstep(lipL, lipL-0.03, vUv.x) + smoothstep(lipR, lipR+0.03, vUv.x);\n' +
-  '  vec3 prev = texture(uTarget,vUv).xyz;\n' +
-  '  if(uMode < 0.5) fragColor = vec4(prev + uValue*((runL+runR)*1.35 + resv*0.55), 1.);\n' +
-  '  else fragColor = vec4(prev.x + (runL - runR)*uPush, prev.y, 0., 1.); }';
+  'void main(){\n' +
+  /* t: 0 in alto a sinistra, 1 in basso a destra. s: lungo il fronte. */
+  '  float t = (vUv.x + (1.0 - vUv.y)) * 0.5;\n' +
+  '  float sx = (vUv.x + vUv.y) * 1.6;\n' +
+  '  float n = 0.55*n11(sx*3.1 + uTime*0.07) + 0.30*n11(sx*7.0 - uTime*0.05) + 0.15*n11(sx*13.0);\n' +
+  '  float lip = uP*uAdv + (n - 0.5)*uThick*2.0;\n' +
+  '  float dd = (t - lip)/uThick;\n' +
+  '  float run = exp(-dd*dd);\n' +
+  '  vec3 prev = texture(uTarget, vUv).xyz;\n' +
+  '  if(uMode < 0.5) fragColor = vec4(prev + uValue*run*1.6, 1.);\n' +
+  /* la spinta e' lungo la diagonale: +x, -y */
+  '  else fragColor = vec4(prev.x + run*uPush*0.7071, prev.y - run*uPush*0.7071, 0., 1.);\n' +
+  '}';
 
-/* Il velo: carta. Le macchie del fluido corrono avanti, il fronte pieno le
-   rincorre e chiude. Il fronte garantisce la copertura, il fluido la forma. */
+/* Il velo: carta. Le pennellate corrono avanti, il fronte pieno le rincorre
+   e chiude. Il fronte garantisce la copertura, il pennello la forma.
+   uErase = 1: stessa diagonale, stessa direzione, ma la carta se ne va invece
+   di arrivare. Non e' l'animazione al contrario: e' la stessa animazione. */
 var PAPER = HEAD + RND + 'uniform sampler2D uDye; uniform vec3 uCol;\n' +
-  'uniform float uInkK, uP, uTime, uAdv, uRes;\n' +
+  'uniform float uInkK, uP, uTime, uAdv, uRes, uErase;\n' +
   'void main(){ float c = texture(uDye, vUv).x;\n' +
   '  float body = 1. - exp(-uInkK*c);\n' +
   '  float blob = smoothstep(0.45, 0.58, body);\n' +
-  '  float Y = vUv.y*2.4;\n' +
-  '  float amp = 0.055*sin(3.14159265*clamp(uP,0.,1.));\n' +
-  '  float wL = (0.6*n11(Y*3.4 + uTime*0.08) + 0.4*n11(Y*11.0) - 0.5)*amp;\n' +
-  '  float wR = (0.6*n11(Y*3.4 + 29.0 - uTime*0.07) + 0.4*n11(Y*11.0 + 7.0) - 0.5)*amp;\n' +
-  '  float eL = uP*uAdv + wL, eR = 1. - (uP*uAdv + wR);\n' +
-  '  float fe = 0.002 + amp*0.05;\n' +
-  '  float front = max(smoothstep(eL, eL-fe, vUv.x), smoothstep(eR, eR+fe, vUv.x));\n' +
-  '  float a = clamp(max(blob, front), 0., 1.);\n' +
+  '  float t  = (vUv.x + (1.0 - vUv.y)) * 0.5;\n' +
+  '  float sx = (vUv.x + vUv.y) * 1.6;\n' +
+  '  float amp = 0.06*sin(3.14159265*clamp(uP,0.,1.));\n' +
+  '  float w = (0.55*n11(sx*3.1 + uTime*0.07) + 0.30*n11(sx*7.0 - uTime*0.05)\n' +
+  '           + 0.15*n11(sx*13.0) - 0.5) * amp * 2.0;\n' +
+  '  float e  = uP*uAdv + w;\n' +
+  '  float fe = 0.004 + amp*0.10;\n' +
+  '  float a;\n' +
+  '  if(uErase < 0.5){\n' +
+  '    a = clamp(max(blob, smoothstep(e, e - fe, t)), 0., 1.);\n' +
+  '  } else {\n' +
+  '    float front = smoothstep(e, e + fe, t);\n' +
+  '    float band  = exp(-pow((t - e)/max(fe*4.0, 1e-4), 2.0));\n' +
+  '    a = clamp(front + (blob - 0.45)*0.9*band, 0., 1.);\n' +
+  '  }\n' +
   '  vec3 col = mix(uCol, uCol*0.992, 1.-vUv.y);\n' +
-  '  col += (fract(sin(dot(vUv*uRes + fract(uTime),vec2(12.9898,78.233)))*43758.5453)-0.5)*0.010;\n' +
+  '  col += (fract(sin(dot(vUv*uRes + fract(uTime),vec2(12.9898,78.233)))*43758.5453)-0.5)*0.011;\n' +
   '  fragColor = vec4(col*a, a); }';
 
 /* Il pennello: bianco premoltiplicato. Il canvas e' in difference, quindi
@@ -788,7 +735,7 @@ var Ink = (function(){
     if(made) return;
     made = true;
     veilF = Fluid(veil, PAPER, { sim:96, dye:448, inkK:2.60, ref:3.0,
-      gravity:0.30, curl:0.10, dyeDiss:FLOOD_DISS, velDiss:2.60, ambient:0.004, dragX:2.6 });
+      gravity:0.10, curl:0.10, dyeDiss:FLOOD_DISS, velDiss:2.60, ambient:0.004, dragX:2.6 });
     if(!veilF.ok) veilF = null;
     if(BRUSH){
       brushF = Fluid(brush, NEG, { sim:96, dye:384, inkK:2.60, ref:3.0,
@@ -836,7 +783,7 @@ function clearTimers(){ timers.forEach(clearTimeout); timers = []; }
    -------------------------------------------------------------------------- */
 var Eng = (function(){
   var raf = 0, last = 0, acc = 0;
-  var p = 0, from = 0, to = 0, t0 = 0, dur = 1, moving = false, arrive = null;
+  var p = 0, t0 = 0, dur = 1, moving = false, arrive = null, erase = 0;
   var want = 0, have = 0;                              /* opacita’ del pennello */
   var pt = { x:0.5, y:0.5, lx:0.5, ly:0.5, seen:false, had:false };
   var veilLive = false;
@@ -879,8 +826,8 @@ var Eng = (function(){
 
     if(moving){
       var t = Math.min(1, (now - t0)/dur);
-      p = from + (to - from)*easeIO(t);
-      if(t >= 1){ moving = false; p = to; if(arrive){ var f = arrive; arrive = null; f(); } }
+      p = easeIO(t);
+      if(t >= 1){ moving = false; p = 1; if(arrive){ var f = arrive; arrive = null; f(); } }
     }
     have += (want - have)*Math.min(1, dtUi*6);
 
@@ -894,8 +841,10 @@ var Eng = (function(){
     var steps = 0;
     while(acc >= 1/60 && steps < 3){
       if(V && veilLive){
-        if(feeding) V.edge(1/60, p, FLOOD_AMT, FLOOD_PUSH, FLOOD_THICK, FLOOD_ADV);
-        V.P.dyeDiss = (to < 0.5 ? 6.0 : FLOOD_DISS);   /* in chiusura l’inchiostro rientra */
+        if(feeding){
+          V.edge(1/60, p, FLOOD_AMT, FLOOD_PUSH, FLOOD_THICK, FLOOD_ADV);
+          dabs(V, p);
+        }
         V.step(1/60);
       }
       if(B && have > 0.004) B.step(1/60);
@@ -907,6 +856,7 @@ var Eng = (function(){
       gl.uniform1f(u.uP, p);
       gl.uniform1f(u.uAdv, FLOOD_ADV);
       gl.uniform1f(u.uRes, veil.width);
+      gl.uniform1f(u.uErase, erase);
     });
     if(B && have > 0.004) B.render(function(u, gl){
       gl.uniform3f(u.uTint, BRUSH_TINT[0], BRUSH_TINT[1], BRUSH_TINT[2]);
@@ -915,7 +865,7 @@ var Eng = (function(){
 
     if(!feeding && veilLive && !moving){                /* arrivato: la fisica si ferma */
       veilLive = false;
-      if(p < 0.0005 && V){ V.wipe(); veil.style.display = 'none'; }
+      if(erase && V){ V.wipe(); veil.style.display = 'none'; }
     }
     if(B && have <= 0.004 && want === 0){ brush.style.display = 'none'; pt.had = false; }
 
@@ -925,11 +875,31 @@ var Eng = (function(){
 
   function kick(){ if(!raf){ last = 0; raf = requestAnimationFrame(frame); } }
 
+  /* Le pennellate che corrono lungo il fronte: e' questo che fa sembrare una
+     mano che dipinge invece di una tenda che si chiude. Il punto si pesca
+     sulla retta a 45 gradi che in questo istante e' il fronte. */
+  function dabs(F, prog){
+    if(FLOOD_DABS <= 0) return;
+    var L = prog*FLOOD_ADV;
+    var lo = Math.max(0, 2*L - 1), hi = Math.min(1, 2*L);
+    if(hi <= lo) return;
+    for(var k = 0; k < FLOOD_DABS; k++){
+      var x = lo + Math.random()*(hi - lo);
+      var y = x - 2*L + 1;
+      if(y < -0.05 || y > 1.05) continue;
+      F.splat(x, y, FLOOD_PUSH*0.7071, -FLOOD_PUSH*0.7071, FLOOD_DAB_A, FLOOD_DAB_R, 0);
+    }
+  }
+
   return {
-    to: function(target, ms, done){
-      from = p; to = target; dur = Math.max(1, ms); t0 = nowMs();
-      moving = true; arrive = done || null;
-      if(target > 0.5) veil.style.display = 'block';
+    /* Una corsa sola, sempre 0 -> 1. In uscita cambia solo cosa vuol dire
+       "arrivato": la carta se ne va invece di arrivare, nella stessa
+       direzione e con la stessa fisica. */
+    play: function(isErase, ms, done){
+      erase = isErase ? 1 : 0;
+      p = 0; dur = Math.max(1, ms); t0 = nowMs();
+      moving = true; arrive = done || null; veilLive = true;
+      veil.style.display = 'block';
       kick();
     },
     brushOn: function(){
@@ -1023,13 +993,12 @@ function openMenu(){
   btn.setAttribute('aria-expanded','true');
   swapLabel(CLOSE_TXT);
   lock(true);
-  paintOpenBar();
 
   var flood = REDUCED ? 1 : FLOOD_MS;
 
   if(canGL && !glOn){ Ink.build(); glOn = !!Ink.veil(); }
   if(glOn){
-    Eng.to(1, flood);
+    Eng.play(false, flood);
   }else{
     fold.style.display = 'block';
     fold.style.setProperty('--ch-fold', flood + 'ms');
@@ -1055,30 +1024,32 @@ function closeMenu(){
 
   var back = REDUCED ? 1 : RETREAT_MS;
 
-  at(230, function(){
-    if(glOn) Eng.to(0, back);
+  at(180, function(){
+    if(glOn) Eng.play(true, back);
     else{
+      fold.style.setProperty('--ch-fold', '0ms');
+      fold.classList.remove('is-on');          /* rimettilo all'inizio, di scatto */
+      void fold.offsetWidth;
       fold.style.setProperty('--ch-fold', back + 'ms');
-      fold.classList.remove('is-on');
-      at(back + 30, function(){ fold.style.display = 'none'; });
+      fold.classList.add('is-on');             /* e ripercorri la stessa diagonale */
+      at(back + 30, function(){
+        fold.style.display = 'none';
+        fold.style.setProperty('--ch-fold', '0ms');
+        fold.classList.remove('is-on');
+      });
     }
   });
 
-  at(230 + back + 60, function(){
+  at(180 + back + 60, function(){
     panel.classList.remove('is-on');
     btn.classList.remove('is-open');
     lock(false);                           /* senza questa la pagina resta ferma */
     busy = false;
-    paintBar();
     try{ btn.focus({preventScroll:true}); }catch(e){ btn.focus(); }
   });
 }
 
 function toggle(){ open ? closeMenu() : openMenu(); }
-
-function paintOpenBar(){                 /* su carta bianca si scrive in inchiostro */
-  btn.style.setProperty('--ch-btn-ink','rgba(37,42,34,.92)');
-}
 
 /* ==========================================================================
    8 · LO SCROLL BLOCCATO E LA TASTIERA
@@ -1160,21 +1131,12 @@ function init(){
 
   lastY = window.pageYOffset || 0;
   window.addEventListener('scroll', onScroll, {passive:true});
-  if(TONE_PROBE){
-    probe(); tone = toneTarget; paintBar();
-    (function tick(){
-      if(!open){ probe(); var dz = toneTarget - tone; if(Math.abs(dz) > 0.002){ tone += dz*0.10; paintBar(); } }
-      setTimeout(function(){ requestAnimationFrame(tick); }, 120);
-    })();
-  }
-
   var rt;
   window.addEventListener('resize', function(){
     clearTimeout(rt);
     rt = setTimeout(function(){
       canGL = !REDUCED && window.innerWidth >= WEBGL_MIN_W;
       Eng.resize();
-      if(!open) probe();
     }, 180);
   }, {passive:true});
 
