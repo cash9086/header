@@ -117,7 +117,7 @@ var FLOOD_DAB_V = 0.090;  /* quanta velocita' la mano passa al fluido: e' questo
 /* --- il pennello che inverte i colori ------------------------------------ */
 var BRUSH        = true;  /* false = niente pennellata                        */
 var BRUSH_ALWAYS = false; /* true = attivo anche a menu chiuso, su tutta la pagina */
-var BRUSH_SIZE   = 0.1;  /* GRANDEZZA dell'inchiostro che segue il cursore, in
+var BRUSH_SIZE   = 1.5;  /* GRANDEZZA dell'inchiostro che segue il cursore, in
                              percentuale dell'altezza dello schermo. E' l'unica
                              manopola che serve: per toglierne il 20% metti 1.50,
                              per aggiungerne il 20% metti 2.24. Il passo del
