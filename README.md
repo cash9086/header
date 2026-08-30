@@ -111,3 +111,12 @@ da toccare: il passo del tratto si adegua da solo. (Il fluido internamente vuole
 il raggio al quadrato, ma la conversione la fa il codice.)
 
 Da fuori si puo' chiamare `capeHeader.open()`, `.close()` e `.toggle()`.
+
+---
+
+## Nello stesso repo
+
+`cape-title-ink.js` — l'inchiostro che vive **dentro** la scritta nera
+dell'hero, con lo stesso fluido di questo file. E' indipendente da
+`cape-header.js`: si include da solo e i due non si toccano. Istruzioni e
+manopole in [`README-cape-title-ink.md`](README-cape-title-ink.md).
