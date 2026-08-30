@@ -117,11 +117,11 @@ var FLOOD_DAB_V = 0.090;  /* quanta velocita' la mano passa al fluido: e' questo
 /* --- il pennello che inverte i colori ------------------------------------ */
 var BRUSH        = true;  /* false = niente pennellata                        */
 var BRUSH_ALWAYS = false; /* true = attivo anche a menu chiuso, su tutta la pagina */
-var BRUSH_R      = 0.00049;/* raggio dello splat. E' exp(-d^2/r), quindi il raggio
+var BRUSH_R      = 0.00035;/* raggio dello splat. E' exp(-d^2/r), quindi il raggio
                              vero e' ~sqrt(r): per cambiarlo di un fattore k si
-                             moltiplica r per k al quadrato. ~2.2% dell'altezza. */
+                             moltiplica r per k al quadrato. ~1.9% dell'altezza. */
 var BRUSH_AMT    = 0.36;  /* colorante per splat: piu' alto = pennellata piu' larga */
-var BRUSH_STEP   = 0.004; /* passo lungo il tratto: va tenuto sotto al raggio,
+var BRUSH_STEP   = 0.0034;/* passo lungo il tratto: va tenuto sotto al raggio,
                              se no un pennello piccolo lascia una fila di punti */
 var BRUSH_PULL   = 0.26;  /* quanta velocita' della mano passa al fluido. Piu' e'
                              alto piu' l'inchiostro scappa avanti alla mano;
@@ -261,7 +261,7 @@ function mount(){
    ========================================================================== */
 var shown = false, lastY = 0, ticking = false, open = false;
 
-var PAPER_HEX = '#FBFAF7', INK_HEX = '#252A22';
+var PAPER_HEX = '#ffffff', INK_HEX = '#252A22';
 var lightBg = false, lastProbe = 0;
 
 /* Guarda tre punti appena sopra il bordo del bottone, risale il DOM fino al
@@ -512,8 +512,9 @@ var PAPER = HEAD + RND + 'uniform sampler2D uDye; uniform vec3 uCol;\n' +
   '    float band  = exp(-pow((t - e)/max(fe*4.0, 1e-4), 2.0));\n' +
   '    a = clamp(front + (blob - 0.45)*0.9*band, 0., 1.);\n' +
   '  }\n' +
-  '  vec3 col = mix(uCol, uCol*0.992, 1.-vUv.y);\n' +
-  '  col += (fract(sin(dot(vUv*uRes + fract(uTime),vec2(12.9898,78.233)))*43758.5453)-0.5)*0.011;\n' +
+  /* Bianco pieno: niente sfumatura verticale e niente grana, se no il fondo
+     non e' piu' esattamente #ffffff. */
+  '  vec3 col = uCol;\n' +
   '  fragColor = vec4(col*a, a); }';
 
 /* Il pennello: bianco premoltiplicato. Il canvas e' in difference, quindi
@@ -894,7 +895,7 @@ var Eng = (function(){
     }
 
     if(V && veilLive) V.render(function(u, gl){
-      gl.uniform3f(u.uCol, 0.984, 0.980, 0.968);        /* #FBFAF7 — carta */
+      gl.uniform3f(u.uCol, 1.0, 1.0, 1.0);              /* #ffffff — carta */
       gl.uniform1f(u.uP, p);
       gl.uniform1f(u.uAdv, FLOOD_ADV);
       gl.uniform1f(u.uRes, veil.width);

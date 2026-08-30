@@ -12,13 +12,13 @@
 
 /* ============ token: quelli della pagina, non colori nuovi ================ */
 :root{
-  --ch-paper:#FBFAF7;      /* carta: il fondo del menu (lo stesso di .studio-hero) */
+  --ch-paper:#ffffff;      /* carta: il fondo del menu                          */
   --ch-ink:#252A22;        /* inchiostro: il testo             */
   --ch-ease:cubic-bezier(.16,1,.3,1);      /* la salita del sito */
   --ch-ease-io:cubic-bezier(.76,0,.24,1);  /* le transizioni grandi */
   --ch-pad:clamp(20px,4vw,64px);           /* il respiro dentro la colonna delle voci */
   /* scritte dal JS: o carta su inchiostro, o inchiostro su carta. Mai altro. */
-  --ch-btn-bg:#FBFAF7;
+  --ch-btn-bg:#ffffff;
   --ch-btn-ink:#252A22;
 }
 
@@ -158,13 +158,20 @@
   text-transform:uppercase; color:rgba(37,42,34,.38); white-space:nowrap;
   transition:color .45s var(--ch-ease);
 }
-/* passare sopra l'elenco spegne tutto il resto: resta accesa una voce sola */
-.capehdr-list:hover .capehdr-name{ color:rgba(37,42,34,.24); }
-.capehdr-list:hover .capehdr-desc{ color:rgba(37,42,34,.18); }
-.capehdr-link:hover .capehdr-name,
-.capehdr-link:focus-visible .capehdr-name,
-.capehdr-link:hover .capehdr-desc,
-.capehdr-link:focus-visible .capehdr-desc{ color:var(--ch-ink); }
+/* Passare sopra UNA VOCE spegne le altre. Deve essere :has(), non :hover
+   sull'elenco: l'elenco riempie tutta la colonna, quindi con :hover bastava
+   entrare in mezzo schermo per spegnere tutto senza accendere niente.
+   Dove :has() non c'e', la regola cade e le voci restano semplicemente
+   tutte accese: nessun stato rotto. */
+.capehdr-list:has(.capehdr-link:hover) .capehdr-name{ color:rgba(37,42,34,.24); }
+.capehdr-list:has(.capehdr-link:hover) .capehdr-desc{ color:rgba(37,42,34,.18); }
+/* La voce accesa va scritta con la stessa specificita' di quella che spegne,
+   se no perde: :has() pesa quanto il suo argomento piu' specifico. Pari
+   specificita' e piu' in basso nel file = vince questa. */
+.capehdr-list .capehdr-link:hover .capehdr-name,
+.capehdr-list .capehdr-link:focus-visible .capehdr-name,
+.capehdr-list .capehdr-link:hover .capehdr-desc,
+.capehdr-list .capehdr-link:focus-visible .capehdr-desc{ color:var(--ch-ink); }
 .capehdr-link:focus-visible{ outline:1px solid rgba(37,42,34,.45); outline-offset:6px; }
 
 /* --- l'involucro che scorre dietro il bordo del proprio contenitore.
