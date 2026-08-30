@@ -106,8 +106,8 @@ var FLOOD_THICK = 0.052;  /* spessore della banda che corre davanti al fronte  *
 var FLOOD_ADV   = 1.06;   /* quanto corre il fronte: >1 per chiudere gli angoli */
 var FLOOD_DABS  = 5;      /* quante impronte al massimo per frame lungo il tratto
                              percorso dalla mano. 0 = fronte liscio, senza pennello */
-var FLOOD_DAB_R = 0.030;  /* quanto e' larga la setola. E' exp(-d^2/r): il raggio
-                             vero e' ~sqrt(r), quindi qui siamo sul 17% dell'altezza */
+var FLOOD_DAB_SZ= 17.3;   /* LARGHEZZA della setola delle pennellate di entrata e
+                             uscita, sempre in percentuale dell'altezza schermo. */
 var FLOOD_DAB_A = 0.20;   /* quanto colorante lascia ogni impronta            */
 var FLOOD_SWEEP = 3.30;   /* passate al secondo: la mano va avanti e indietro
                              lungo il fronte, come chi pittura un muro         */
@@ -117,12 +117,13 @@ var FLOOD_DAB_V = 0.090;  /* quanta velocita' la mano passa al fluido: e' questo
 /* --- il pennello che inverte i colori ------------------------------------ */
 var BRUSH        = true;  /* false = niente pennellata                        */
 var BRUSH_ALWAYS = false; /* true = attivo anche a menu chiuso, su tutta la pagina */
-var BRUSH_R      = 0.00035;/* raggio dello splat. E' exp(-d^2/r), quindi il raggio
-                             vero e' ~sqrt(r): per cambiarlo di un fattore k si
-                             moltiplica r per k al quadrato. ~1.9% dell'altezza. */
+var BRUSH_SIZE   = 1.87;  /* GRANDEZZA dell'inchiostro che segue il cursore, in
+                             percentuale dell'altezza dello schermo. E' l'unica
+                             manopola che serve: per toglierne il 20% metti 1.50,
+                             per aggiungerne il 20% metti 2.24. Il passo del
+                             tratto si adegua da solo.                        */
 var BRUSH_AMT    = 0.36;  /* colorante per splat: piu' alto = pennellata piu' larga */
-var BRUSH_STEP   = 0.0034;/* passo lungo il tratto: va tenuto sotto al raggio,
-                             se no un pennello piccolo lascia una fila di punti */
+
 var BRUSH_PULL   = 0.26;  /* quanta velocita' della mano passa al fluido. Piu' e'
                              alto piu' l'inchiostro scappa avanti alla mano;
                              abbassalo per tenerlo incollato al puntatore.     */
@@ -132,6 +133,15 @@ var BRUSH_GRAVITY= 0.34;  /* quanto cola. E' qui che si vede il non newtoniano:
 var BRUSH_TINT   = [1.0,0.985,0.96]; /* su carta bianca l'inversione da' nero-inchiostro */
 var WEBGL_MIN_W  = 992;   /* sotto questa larghezza: coreografia in CSS       */
 /* ========================================================================== */
+
+/* Le due grandezze qui sopra sono percentuali perche' e' cosi' che si ragiona.
+   Il fluido pero' vuole il raggio dentro un exp(-d^2/r), dove r e' il raggio al
+   quadrato: la conversione la fa il codice, una volta, qui. Il passo del tratto
+   e' una frazione fissa del raggio — sotto quella soglia un pennello piccolo
+   smette di lasciare un tratto e lascia una fila di punti. */
+var BRUSH_R     = Math.pow(BRUSH_SIZE/100, 2);
+var BRUSH_STEP  = (BRUSH_SIZE/100) * 0.18;
+var FLOOD_DAB_R = Math.pow(FLOOD_DAB_SZ/100, 2);
 
 
 /* ----- il terreno: capacita’ della macchina, non gusti ------------------- */

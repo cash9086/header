@@ -98,4 +98,16 @@ Le immagini stanno nell'array `INDEX`, una per voce, piu' `LOGO` per quella a
 riposo. Una voce senza immagine tiene il logo. Sono precaricate: cambiare
 voce e' solo un'opacita' che si scambia.
 
+Le due grandezze dell'inchiostro sono in **percentuale dell'altezza dello
+schermo**, cosi' si ragiona a occhio:
+
+| Manopola | Cos'e' | Ora |
+|---|---|---|
+| `BRUSH_SIZE` | l'inchiostro che segue il cursore | `1.87` |
+| `FLOOD_DAB_SZ` | la setola delle pennellate di entrata e uscita | `17.3` |
+
+Per togliere il 20% si moltiplica per 0.8, per aggiungerlo per 1.2. Nient'altro
+da toccare: il passo del tratto si adegua da solo. (Il fluido internamente vuole
+il raggio al quadrato, ma la conversione la fa il codice.)
+
 Da fuori si puo' chiamare `capeHeader.open()`, `.close()` e `.toggle()`.
