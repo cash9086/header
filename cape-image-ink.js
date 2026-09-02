@@ -59,7 +59,12 @@
    DOVE VA
    Pages -> The Cape Studio -> Settings -> Custom code -> Before </body> tag,
    come ultima riga:
-     <script defer src="https://cdn.jsdelivr.net/gh/cash9086/header@SHA/cape-image-ink.js"></script>
+     <script defer src="https://cdn.jsdelivr.net/gh/cash9086/header@SHA/cape-image-ink.js"><\/script>
+   (la barra rovesciata li' sopra serve solo qui dentro. Se questo file finisce
+   incollato DENTRO un tag script invece che linkato, un tag di chiusura scritto
+   per esteso lo chiuderebbe a meta' file: il browser prende il resto per testo
+   e non parte niente, con un "Invalid or unexpected token" in console. Scritto
+   con la barra, il file si puo' incollare inline senza rompere nulla.)
    Il CSS se lo scrive da solo. Non c'e' ordine da rispettare con gli altri
    script della pagina.
 
