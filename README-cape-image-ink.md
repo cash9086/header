@@ -108,13 +108,19 @@ capeImageInk.set({ GRADE: 'invert(1) hue-rotate(180deg) sepia(.22)' })     // vi
 
 ## Il cursore
 
-Sulle immagini l'anello con la scritta si ritira e al suo posto compare una punta
-di pennello: si inclina nella direzione in cui va la mano e si allunga con la
-velocita', assottigliandosi — a volume costante, come un tratto vero. Quando la
-mano si ferma la punta si raccoglie e torna la scritta **VIEW**.
+Sulle immagini l'anello si ritira e al suo posto compare una punta di pennello:
+si inclina nella direzione in cui va la mano e si allunga con la velocita',
+assottigliandosi — a volume costante, come un tratto vero.
 
-> Muoversi = stai dipingendo. Fermarsi = stai guardando. Mai due messaggi
-> insieme.
+La scritta **VIEW** resta li' tutto il tempo che il cursore e' sull'immagine: e'
+l'invito a cliccare, e un invito che compare solo quando ti fermi non lo vede
+nessuno. Non e' pero' incollata al cursore — insegue la punta con un filo di
+ritardo (`LABEL_LAG`), e non si stacca mai piu' di `LABEL_CAP` pixel nemmeno su
+una sciabolata.
+
+Se su una certa immagine la vuoi via, `data-cursor=""`. Se la vuoi piu' discreta
+mentre la mano corre, `LABEL_MIN` sotto 1: e' la sua opacita' in movimento, e
+torna piena appena ti fermi. A `LABEL_MIN: 0` compare solo a mano ferma.
 
 **Il blocco `#capecur` gia' in pagina non va toccato.** Viene messo a riposo da
 una regola CSS con `!important`, che batte le opacita' inline che quel codice
@@ -175,11 +181,15 @@ Selezioni l'elemento e nel pannello Style aggiungi `ink-invert` in coda alle
 classi che ha gia'. Non serve darle nessuna proprieta': resta vuota, e' solo
 un'etichetta.
 
-**Una nota sulla scritta.** A mano ferma il cursore mostra `VIEW`. Su
-un'immagine che prende l'inchiostro ma non si apre, mettile `data-cursor=""`
-(Element settings → Custom attributes, valore vuoto) e la scritta non compare:
-resta solo il pennello. Con un valore diverso — `data-cursor="Zoom"` — scrive
-quello.
+**Una nota sulla scritta.** Il cursore mostra `VIEW` per tutto il tempo che sta
+sull'immagine. Su una che prende l'inchiostro ma **non si apre**, mettile
+`data-cursor=""` (Element settings → Custom attributes, valore vuoto) e la
+scritta non compare: resta solo il pennello. Con un valore diverso —
+`data-cursor="Zoom"` — scrive quello.
+
+> Attenzione che oggi nessuna delle tre immagini e' dentro un Link: `VIEW`
+> promette un clic che non succede. O le avvolgi in un Link Block, o su quelle
+> che restano ferme metti `data-cursor=""`.
 
 ---
 
@@ -191,6 +201,7 @@ che si toccano davvero:
 | Manopola | Cos'e' | Ora |
 |---|---|---|
 | `SEL` | chi prende l'inchiostro | `.ink-invert, [data-ink-invert]` |
+| `LABEL_MIN` | opacita' della scritta a mano in movimento | `1` |
 | `GRADE` | l'inversione, in una riga | `invert(1) hue-rotate(180deg) saturate(.92) contrast(1.04)` |
 | `BRUSH_SIZE` | grandezza della punta, in % dell'altezza dell'immagine | `1.7` |
 | `BRUSH_DRY` | quanto asciuga in fretta: piu' alto = il tratto svanisce prima | `1.45` |

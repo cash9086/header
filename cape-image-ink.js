@@ -41,11 +41,12 @@
    l'effetto su una foto.
 
    IL CURSORE
-   Sulle immagini l'anello con la scritta si ritira e al suo posto compare una
-   punta di pennello: si inclina nella direzione in cui va la mano e si allunga
-   con la velocita', come un tratto vero. Quando la mano si ferma la punta si
-   raccoglie e torna la scritta VIEW. Muoversi = stai dipingendo; fermarsi =
-   stai guardando. Non c'e' mai piu' di un messaggio alla volta.
+   Sulle immagini l'anello si ritira e al suo posto compare una punta di
+   pennello: si inclina nella direzione in cui va la mano e si allunga con la
+   velocita', come un tratto vero. La scritta VIEW resta li' tutto il tempo —
+   e' l'invito a cliccare, e un invito che compare solo quando ti fermi non lo
+   vede nessuno — ma insegue la punta un filo piu' lenta, cosi' non sembra
+   incollata al cursore mentre dipingi.
    Il blocco #capecur gia' in pagina NON va toccato: viene messo a riposo da
    una regola CSS con !important, che batte le opacita' inline che quel codice
    scrive a ogni frame.
@@ -150,11 +151,27 @@ var NIB_MAX  = 2.05;   /* quanto si allunga al massimo della velocita'        */
 var NIB_SPD  = 900;    /* px/s a cui la punta e' allungata al massimo         */
 var TRAIL    = 0.20;   /* scia: e' la stessa del cursore gia' in pagina, cosi'
                           i due non si separano mai                           */
-var REST_MS  = 240;    /* quanto deve stare ferma la mano perche' torni VIEW  */
+/* LA SCRITTA. Sta li' tutto il tempo che il cursore e' sull'immagine: e' un
+   invito a cliccare, e un invito che compare solo quando ti fermi non lo vede
+   nessuno. Si muove pero' un filo piu' lenta della punta (LABEL_LAG), cosi'
+   non sembra incollata al cursore mentre dipingi.
+   LABEL_MIN e' quanto si vede MENTRE la mano corre: a 1 non cambia mai, sotto
+   1 sfiata un po' in corsa e si riprende quando ti fermi. A 0 torna il
+   comportamento di prima, cioe' compare solo a mano ferma. */
+var LABEL    = 'View'; /* il testo. data-cursor lo sovrascrive; data-cursor=""
+                          (vuoto) toglie la scritta — per le immagini che
+                          prendono l'inchiostro ma non si aprono              */
+var LABEL_MIN= 1;      /* opacita' della scritta a mano in movimento          */
+var LABEL_LAG= 0.45;   /* quanto la scritta insegue la punta: 1 = incollata.
+                          Attenzione che e' meno intuitivo di quel che sembra:
+                          il ritardo che si vede va come (1-LAG)/LAG per la
+                          velocita' della punta, quindi 0.15 non e' "un filo
+                          di ritardo", e' mezzo schermo indietro su una passata
+                          veloce. 0.45 sono una decina di px a velocita' vera. */
+var LABEL_CAP= 26;     /* e comunque non si stacca mai piu' di tanti px: su una
+                          sciabolata la scritta deve seguire, non volare via   */
+var REST_MS  = 240;    /* quanto deve stare ferma la mano per dirla "ferma"   */
 var REST_SPD = 42;     /* px/s sotto cui la mano e' considerata ferma         */
-var LABEL    = 'View'; /* la scritta a mano ferma. data-cursor la sovrascrive;
-                          data-cursor="" (vuoto) la toglie e basta — serve sulle
-                          immagini che prendono l'inchiostro ma non si aprono */
 
 /* --- il terreno ---------------------------------------------------------- */
 var MIN_W    = 992;    /* sotto questa larghezza non parte niente            */
@@ -828,14 +845,15 @@ function compose(t){
 
 /* ==========================================================================
    3 · IL CURSORE-PENNELLO
-   Una punta che si inclina dove va la mano e si allunga con la velocita'.
-   Ferma la mano, la punta si raccoglie e torna la scritta: muoversi = stai
-   dipingendo, fermarsi = stai guardando. Mai due messaggi insieme.
+   Una punta che si inclina dove va la mano e si allunga con la velocita', e
+   sotto la scritta che dice che l'immagine si apre. La scritta c'e' sempre:
+   insegue la punta con un filo di ritardo invece di starle incollata.
    ========================================================================== */
 var Nib = (function(){
   var box = null, svg = null, lab = null;
   var tx = 0, ty = 0, cx = 0, cy = 0, px = 0, py = 0;
   var rot = 0, str = 1, spd = 0, still = 0, on = false, seen = false, raf = 0, last = 0;
+  var lx = 0, ly = 0;                                  /* la scritta, che insegue */
 
   function build(){
     box = d.createElement('div');
@@ -852,7 +870,7 @@ var Nib = (function(){
     d.body.appendChild(box);
     addEventListener('mousemove', function(e){
       tx = e.clientX; ty = e.clientY;
-      if(!seen){ seen = true; cx = tx; cy = ty; px = cx; py = cy; }
+      if(!seen){ seen = true; cx = tx; cy = ty; px = cx; py = cy; lx = cx; ly = cy; }
     }, {passive:true});
   }
 
@@ -882,8 +900,13 @@ var Nib = (function(){
     /* volume costante: quando si allunga si assottiglia, come un tratto vero */
     svg.style.transform = 'translate(-50%,-50%) rotate(' + rot.toFixed(2) + 'deg) ' +
                           'scale(' + str.toFixed(3) + ',' + (1/Math.sqrt(str)).toFixed(3) + ')';
-    lab.style.transform = 'translate(-50%,-50%) translateY(' + (NIB_W*0.5 + 15) + 'px)';
-    lab.style.opacity = (on && still > REST_MS) ? '1' : '0';
+    var le = 1 - Math.pow(1 - LABEL_LAG, f);
+    lx += (cx-lx)*le; ly += (cy-ly)*le;
+    var ox = lx-cx, oy = ly-cy, om = Math.sqrt(ox*ox + oy*oy);
+    if(om > LABEL_CAP){ var q = LABEL_CAP/om; ox *= q; oy *= q; lx = cx+ox; ly = cy+oy; }
+    lab.style.transform = 'translate(-50%,-50%) translate(' + ox.toFixed(2) + 'px,' +
+                          (oy + NIB_W*0.5 + 15).toFixed(2) + 'px)';
+    lab.style.opacity = on ? String(still > REST_MS ? 1 : LABEL_MIN) : '0';
   }
 
   return {
@@ -892,7 +915,7 @@ var Nib = (function(){
       if(!box) build();
       var w = el.getAttribute ? el.getAttribute('data-cursor') : null;
       lab.textContent = (w === null) ? LABEL : w;   /* "" = nessuna scritta */
-      on = true; last = 0;
+      on = true; last = 0; lx = cx; ly = cy;
       box.classList.add('is-on');
       d.documentElement.classList.add('capeink-brush');
       if(!raf) raf = requestAnimationFrame(frame);
@@ -1074,7 +1097,7 @@ function init(){
                 BRUSH_DRY:0, BRUSH_GRAVITY:0, BRUSH_CURL:0, BRUSH_AMB:0, VEL_DISS:0,
                 INK_K:0, RIM:0, RIM_W:0, FADE_IN:0, FADE_OUT:0, NIB_L:0, NIB_W:0,
                 NIB_MAX:0, NIB_SPD:0, TRAIL:0, REST_MS:0, REST_SPD:0, LABEL:0,
-                Z_IMG:0, Z_BOX:0, SEL:0 };
+                LABEL_MIN:0, LABEL_LAG:0, LABEL_CAP:0, Z_IMG:0, Z_BOX:0, SEL:0 };
       var bakeAgain = false, k;
       for(k in o){
         if(!(k in K)) continue;
@@ -1102,6 +1125,9 @@ function init(){
         else if(k === 'REST_MS') REST_MS = o[k];
         else if(k === 'REST_SPD') REST_SPD = o[k];
         else if(k === 'LABEL') LABEL = o[k];
+        else if(k === 'LABEL_MIN') LABEL_MIN = o[k];
+        else if(k === 'LABEL_LAG') LABEL_LAG = o[k];
+        else if(k === 'LABEL_CAP') LABEL_CAP = o[k];
         else if(k === 'SEL'){ SEL = o[k]; scan(); }   /* prende le nuove, non tocca le vecchie */
         else if(k === 'Z_IMG'){ Z_IMG = o[k]; for(var q=0;q<stages.length;q++) if(stages[q].isImg) stages[q].cv.style.zIndex = String(Z_IMG); }
         else if(k === 'Z_BOX'){ Z_BOX = o[k]; for(var w=0;w<stages.length;w++) if(!stages[w].isImg) stages[w].cv.style.zIndex = String(Z_BOX); }
@@ -1115,6 +1141,7 @@ function init(){
                BRUSH_GRAVITY:BRUSH_GRAVITY, BRUSH_CURL:BRUSH_CURL, INK_K:INK_K,
                RIM:RIM, RIM_W:RIM_W, FADE_IN:FADE_IN, FADE_OUT:FADE_OUT,
                NIB_L:NIB_L, NIB_W:NIB_W, NIB_MAX:NIB_MAX, LABEL:LABEL,
+               LABEL_MIN:LABEL_MIN, LABEL_LAG:LABEL_LAG, LABEL_CAP:LABEL_CAP,
                luminanceOnly:HAS_FILTER };
     },
     targets: function(){
