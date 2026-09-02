@@ -236,7 +236,7 @@ che si toccano davvero:
 | `SEL` | chi prende l'inchiostro | `.ink-invert, [data-ink-invert]` |
 | `LABEL_MIN` | opacita' della scritta a mano in movimento | `1` |
 | `NIB` | rimette il simbolo del pennello sotto la scritta | `false` |
-| `BUSY_MAX` | per quanti ms al massimo l'inchiostro si ritira quando lo slider cambia quadro | `900` |
+| `BUSY_SEL` | quando ritirare l'inchiostro. Vuoto = mai, nemmeno al cambio slide | `''` |
 | `GRADE` | l'inversione, in una riga | `invert(1) hue-rotate(180deg) saturate(.92) contrast(1.04)` |
 | `BRUSH_SIZE` | grandezza della punta, in % dell'altezza dell'immagine | `1.7` |
 | `BRUSH_DRY` | quanto asciuga in fretta: piu' alto = il tratto svanisce prima | `1.45` |
@@ -274,24 +274,30 @@ finche' ha inchiostro addosso, poi la GPU torna a dormire.
 
 ### Quando lo slider cambia quadro
 
-L'inchiostro si ritira mentre l'immagine **scorre**, se no resterebbe attaccato
-a un quadro che sta uscendo di scena. Il punto delicato e' per quanto: la classe
-`is-busy` dello slider non dura quanto il movimento: la mettono all'inizio e la
-tolgono quando finisce tutta la coreografia, testi compresi — circa **1,8
-secondi**, mentre l'immagine si muove solo per i primi **0,9**. Seguendo `is-busy`
-alla lettera l'inchiostro restava spento per quasi un secondo in cui non si
-muoveva piu' niente, e passando sopra sembrava rotto.
+**L'inchiostro non si ferma mai**, nemmeno mentre le slide cambiano: chi passa
+sopra vede sempre il pennello rispondere, che e' la cosa che conta.
 
-`BUSY_MAX` mette il tetto: si sospende al massimo 900ms, quanto dura davvero il
-movimento. Misurato prima e dopo, in browser: da **2,0s** a **1,2s** di attesa,
-e i 900ms che restano sono esattamente quelli in cui l'immagine scorre.
+C'e' un prezzo, ed e' onesto dirlo: durante la transizione la finestra di
+ritaglio della pagina scorre e il quadro dentro fa una parallasse, mentre la
+copia invertita resta ferma sul rettangolo dello stage. Per meno di un secondo i
+colori dell'inchiostro non corrispondono esatti a quello che c'e' sotto. E' un
+disallineamento breve su un tratto sottile — molto meno visibile del buco che
+lasciava la ritirata.
 
-Insieme a quello, due dettagli che facevano la loro parte:
+La copia invertita passa comunque al quadro nuovo da sola, e due dettagli fanno
+in modo che il passaggio non lasci scoperto niente:
 
-- la copia invertita **non si spegne piu'** mentre se ne cuoce una nuova. Prima
-  il cambio di quadro azzerava `ready`, e per qualche frame non si dipingeva
-  niente. Meglio l'inchiostro del quadro precedente per un frame che un buco.
-- l'osservatore che accorge del cambio aveva un debounce semplice, e lo slider
+- la copia **non si spegne** mentre se ne cuoce una nuova. Prima il cambio
+  azzerava `ready`, e per qualche frame non si dipingeva niente. Meglio
+  l'inchiostro del quadro precedente per un frame che un buco.
+- l'osservatore che si accorge del cambio aveva un debounce semplice, e lo slider
   scrive una `style` a ogni frame: il timer non scadeva **mai** finche'
-  l'animazione andava. Ora c'e' un tetto d'attesa, quindi il quadro nuovo si
-  vede mentre succede.
+  l'animazione andava. Ora c'e' un tetto d'attesa, quindi il quadro nuovo si vede
+  mentre succede.
+
+Se un domani la ritirata la si rivolesse, la meccanica e' tutta al suo posto:
+`capeImageInk.set({ BUSY_SEL: '.is-busy' })`. In quel caso conta anche
+`BUSY_MAX`, il tetto alla sospensione — serve perche' `is-busy` non dura quanto
+il movimento: lo slider la mette all'inizio e la toglie a coreografia finita,
+testi compresi, circa **1,8 secondi** contro gli **0,9** in cui l'immagine si
+muove davvero.

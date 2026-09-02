@@ -220,18 +220,26 @@ var SIM      = 96;     /* risoluzione del campo di moto (lato corto)         */
 var DYE      = 384;    /* risoluzione del colorante (lato corto)             */
 var ITER     = 18;     /* giri di pressione                                  */
 var MAX_PX   = 2.2e6;  /* tetto ai pixel del canvas: oltre, si abbassa il dpr */
-var BUSY_SEL = '.is-busy'; /* mentre l'immagine SCORRE l'inchiostro si ritira,
-                              invece di restare appiccicato a un quadro che sta
-                              uscendo di scena                                 */
-var BUSY_MAX = 900;    /* ...ma per non piu' di tanti ms, ed e' il motivo per cui
-                          esiste questa manopola. La classe is-busy dello slider
-                          non dura quanto il movimento dell'immagine: la mettono
-                          all'inizio e la tolgono quando finisce TUTTA la
-                          coreografia, testi compresi — circa 1,8 secondi, mentre
-                          l'immagine si muove solo per i primi 0,9. Senza tetto
-                          l'inchiostro resta spento per quasi un secondo in cui
-                          non c'e' piu' niente che si muove, e passando sopra
-                          sembra rotto. 0 = nessun tetto, torna il difetto.     */
+/* IL CAMBIO QUADRO DELLO SLIDER — l'inchiostro non si ferma mai.
+   Vuoto = non si sospende in nessun caso: chi passa sopra vede sempre il
+   pennello rispondere, che e' la cosa che conta.
+
+   A cosa serviva. Mentre lo slider fa la transizione la finestra di ritaglio
+   della pagina scorre e il quadro dentro fa una parallasse, mentre la copia
+   invertita resta ferma sul rettangolo dello stage: per meno di un secondo i
+   colori dell'inchiostro non corrispondono esatti a quello che c'e' sotto.
+   Con la sospensione quel disallineamento non si vedeva — ma si vedeva un buco,
+   che e' peggio.
+
+   Se un domani lo si volesse indietro, basta rimettere '.is-busy' qui e la
+   meccanica e' tutta al suo posto. BUSY_MAX conta solo in quel caso: e' il
+   tetto alla sospensione, e serve perche' is-busy NON dura quanto il movimento
+   — lo slider la mette all'inizio e la toglie a coreografia finita, testi
+   compresi, circa 1,8 secondi contro gli 0,9 in cui l'immagine si muove
+   davvero. Senza tetto l'inchiostro resta spento per quasi un secondo in cui
+   non si muove piu' niente. */
+var BUSY_SEL = '';
+var BUSY_MAX = 900;
 /* Dove si infila il canvas nella pila. Due casi diversi e vale la pena dirlo:
    - su un <img> il canvas si inserisce SUBITO DOPO l'immagine e sta a 0, cosi'
      una didascalia posizionata che viene dopo nel DOM gli resta sopra: si
@@ -1078,8 +1086,9 @@ var Eng = (function(){
 
     for(i = 0; i < live.length; i++){
       t = live[i];
-      /* mentre l'immagine scorre l'inchiostro si ritira — ma solo per il tempo
-         in cui scorre davvero, non per tutta la coreografia (vedi BUSY_MAX). */
+      /* Di serie BUSY_SEL e' vuoto e questo blocco non fa niente: l'inchiostro
+         non si ferma mai. Resta qui perche' la ritirata durante il cambio
+         quadro si riaccende con una stringa (vedi BUSY_SEL). */
       var busy = !!(BUSY_SEL && t.el.closest && t.el.closest(BUSY_SEL));
       if(busy){
         if(!t.busy0) t.busy0 = now;
@@ -1213,7 +1222,7 @@ function init(){
                 INK_K:0, RIM:0, RIM_W:0, FADE_IN:0, FADE_OUT:0, NIB_L:0, NIB_W:0,
                 NIB_MAX:0, NIB_SPD:0, TRAIL:0, REST_MS:0, REST_SPD:0, LABEL:0,
                 LABEL_MIN:0, LABEL_LAG:0, LABEL_CAP:0, LABEL_DY:0, LABEL_SZ:0,
-                LABEL_TR:0, NIB:0, Z_IMG:0, Z_BOX:0, SEL:0, BUSY_MAX:0,
+                LABEL_TR:0, NIB:0, Z_IMG:0, Z_BOX:0, SEL:0, BUSY_MAX:0, BUSY_SEL:0,
                 LAB_IN:0, LAB_OUT:0, LAB_DELAY:0, LABEL_TR_IN:0 };
       var bakeAgain = false, k;
       for(k in o){
@@ -1247,6 +1256,7 @@ function init(){
         else if(k === 'LABEL_CAP') LABEL_CAP = o[k];
         else if(k === 'LABEL_DY') LABEL_DY = o[k];
         else if(k === 'BUSY_MAX') BUSY_MAX = o[k];
+        else if(k === 'BUSY_SEL') BUSY_SEL = o[k];
         else if(k === 'LAB_IN') LAB_IN = o[k];
         else if(k === 'LAB_OUT') LAB_OUT = o[k];
         else if(k === 'LAB_DELAY') LAB_DELAY = o[k];
@@ -1269,7 +1279,8 @@ function init(){
                NIB_L:NIB_L, NIB_W:NIB_W, NIB_MAX:NIB_MAX, LABEL:LABEL,
                LABEL_MIN:LABEL_MIN, LABEL_LAG:LABEL_LAG, LABEL_CAP:LABEL_CAP,
                LABEL_DY:LABEL_DY, LABEL_SZ:LABEL_SZ, LABEL_TR:LABEL_TR, NIB:NIB,
-               BUSY_MAX:BUSY_MAX, LAB_IN:LAB_IN, LAB_OUT:LAB_OUT, LAB_DELAY:LAB_DELAY,
+               BUSY_SEL:BUSY_SEL, BUSY_MAX:BUSY_MAX,
+               LAB_IN:LAB_IN, LAB_OUT:LAB_OUT, LAB_DELAY:LAB_DELAY,
                luminanceOnly:HAS_FILTER };
     },
     targets: function(){
