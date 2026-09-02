@@ -108,19 +108,36 @@ capeImageInk.set({ GRADE: 'invert(1) hue-rotate(180deg) sepia(.22)' })     // vi
 
 ## Il cursore
 
-Sulle immagini l'anello si ritira e al suo posto compare una punta di pennello:
-si inclina nella direzione in cui va la mano e si allunga con la velocita',
-assottigliandosi — a volume costante, come un tratto vero.
+Sull'immagine il cursore e' **una cosa sola: la parola `VIEW`**. Il cursore che
+c'e' gia' in pagina — onda, anello, sua scritta — si spegne per intero finche'
+sei sull'immagine, e torna da solo quando esci.
 
-La scritta **VIEW** resta li' tutto il tempo che il cursore e' sull'immagine: e'
-l'invito a cliccare, e un invito che compare solo quando ti fermi non lo vede
-nessuno. Non e' pero' incollata al cursore — insegue la punta con un filo di
-ritardo (`LABEL_LAG`), e non si stacca mai piu' di `LABEL_CAP` pixel nemmeno su
-una sciabolata.
+C'era anche un simbolo di pennello e l'ho tolto. Fra l'anello grande, il simbolo
+e la scritta erano **tre segni diversi tutti nello stesso punto**, e tre segni
+insieme non si leggono. Che stai dipingendo non serve dirlo: lo dice
+l'inchiostro, che e' molto piu' grande e molto piu' chiaro di un simbolino da
+26px. Chi lo rivuole, la meccanica e' ancora tutta li': `capeImageInk.set({ NIB: true })`.
 
-Se su una certa immagine la vuoi via, `data-cursor=""`. Se la vuoi piu' discreta
-mentre la mano corre, `LABEL_MIN` sotto 1: e' la sua opacita' in movimento, e
-torna piena appena ti fermi. A `LABEL_MIN: 0` compare solo a mano ferma.
+La parola resta per tutto il tempo — e' l'invito a cliccare, e un invito che
+compare solo quando ti fermi non lo vede nessuno — ma insegue il puntatore con
+un filo di ritardo (`LABEL_LAG`), e non si stacca mai piu' di `LABEL_CAP` pixel
+nemmeno su una sciabolata.
+
+Le manopole della scritta: `LABEL_SZ` il corpo, `LABEL_TR` il tracking, `LABEL_DY`
+quanto sta sotto al puntatore, `LABEL_MIN` la sua opacita' mentre la mano corre
+(a 0 torna a comparire solo a mano ferma). Se su una certa immagine non la vuoi,
+`data-cursor=""`.
+
+### Perche' il cursore della pagina si spegne intero
+
+Prima ne spegnevo i tre pezzi uno per uno — l'onda, l'anello, la sua scritta.
+Basta pero' che quel codice cambi un nome di classe e uno dei tre resta acceso
+addosso al nostro. Spegnere il contenitore `#capecur` non ha quel problema:
+qualunque cosa ci sia dentro, e' spenta.
+
+Il suo codice **non si tocca lo stesso**: continua a girare e a scrivere le sue
+opacita' inline, semplicemente non si vede. Se un domani togli questo file,
+torna tutto com'era senza rimettere mano a niente.
 
 **Il blocco `#capecur` gia' in pagina non va toccato.** Viene messo a riposo da
 una regola CSS con `!important`, che batte le opacita' inline che quel codice
@@ -202,6 +219,7 @@ che si toccano davvero:
 |---|---|---|
 | `SEL` | chi prende l'inchiostro | `.ink-invert, [data-ink-invert]` |
 | `LABEL_MIN` | opacita' della scritta a mano in movimento | `1` |
+| `NIB` | rimette il simbolo del pennello sotto la scritta | `false` |
 | `GRADE` | l'inversione, in una riga | `invert(1) hue-rotate(180deg) saturate(.92) contrast(1.04)` |
 | `BRUSH_SIZE` | grandezza della punta, in % dell'altezza dell'immagine | `1.7` |
 | `BRUSH_DRY` | quanto asciuga in fretta: piu' alto = il tratto svanisce prima | `1.45` |

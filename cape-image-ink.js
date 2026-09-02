@@ -41,12 +41,17 @@
    l'effetto su una foto.
 
    IL CURSORE
-   Sulle immagini l'anello si ritira e al suo posto compare una punta di
-   pennello: si inclina nella direzione in cui va la mano e si allunga con la
-   velocita', come un tratto vero. La scritta VIEW resta li' tutto il tempo —
-   e' l'invito a cliccare, e un invito che compare solo quando ti fermi non lo
-   vede nessuno — ma insegue la punta un filo piu' lenta, cosi' non sembra
-   incollata al cursore mentre dipingi.
+   Sull'immagine il cursore diventa UNA COSA SOLA: la parola VIEW. Il cursore
+   che c'e' gia' in pagina — onda, anello, sua scritta — si spegne per intero
+   finche' sei sull'immagine, e torna da solo quando esci.
+   Un simbolo di pennello c'era, e l'ho tolto: fra l'anello grande, il simbolo
+   e la scritta erano tre segni nello stesso punto, e tre segni insieme non si
+   leggono. Che stai dipingendo non serve dirlo — lo dice l'inchiostro, che e'
+   molto piu' grande e piu' chiaro di un simbolino da 26px.
+   La parola resta per tutto il tempo (e' l'invito a cliccare, e un invito che
+   compare solo quando ti fermi non lo vede nessuno) ma insegue il puntatore un
+   filo piu' lenta, cosi' non sembra un'etichetta incollata al mouse.
+   Chi la rivuole, la punta e' ancora li': NIB a true.
    Il blocco #capecur gia' in pagina NON va toccato: viene messo a riposo da
    una regola CSS con !important, che batte le opacita' inline che quel codice
    scrive a ogni frame.
@@ -143,8 +148,17 @@ var RIM_W    = 0.16;   /* quanto e' stretto: basso = filo, alto = alone       */
 var FADE_IN  = 220;    /* ms: l'inchiostro non deve mai apparire di colpo     */
 var FADE_OUT = 620;    /* ms: uscendo si ritira mentre asciuga                */
 
-/* --- il cursore-pennello ------------------------------------------------- */
+/* --- il cursore ----------------------------------------------------------
+   Sull'immagine il cursore e' UNA COSA SOLA: la parola. Niente anello, niente
+   punta, niente onda. Non e' minimalismo per partito preso — l'anello grande
+   della pagina, il simbolo del pennello e la scritta erano tre segni diversi
+   tutti nello stesso punto, e tre segni insieme non si leggono. Il pennello poi
+   non serve dirlo: lo dice l'inchiostro, che e' molto piu' grande e piu' chiaro
+   di un simbolino da 26px.
+   Il cursore che c'e' gia' in pagina viene spento per intero finche' sei
+   sull'immagine, e torna da solo quando esci. */
 var CUR      = true;   /* false = lascia il cursore com'e' anche sulle immagini */
+var NIB      = false;  /* true = rimette la punta di pennello sotto la scritta */
 var NIB_L    = 26;     /* lunghezza della punta a riposo (px)                 */
 var NIB_W    = 4.6;    /* larghezza della punta (px)                          */
 var NIB_MAX  = 2.05;   /* quanto si allunga al massimo della velocita'        */
@@ -170,6 +184,12 @@ var LABEL_LAG= 0.45;   /* quanto la scritta insegue la punta: 1 = incollata.
                           veloce. 0.45 sono una decina di px a velocita' vera. */
 var LABEL_CAP= 26;     /* e comunque non si stacca mai piu' di tanti px: su una
                           sciabolata la scritta deve seguire, non volare via   */
+var LABEL_DY = 18;     /* quanto sta sotto al puntatore (px). Sotto e non sopra
+                          perche' e' li' che l'occhio non ha l'inchiostro      */
+var LABEL_SZ = 11;     /* corpo (px). E' quello del cursore gia' in pagina: la
+                          scritta cambia posto, non voce                       */
+var LABEL_TR = 0.16;   /* tracking (em). Su un font piccolo tutto maiuscolo e'
+                          quello che lo rende leggibile invece che compatto    */
 var REST_MS  = 240;    /* quanto deve stare ferma la mano per dirla "ferma"   */
 var REST_SPD = 42;     /* px/s sotto cui la mano e' considerata ferma         */
 
@@ -546,14 +566,16 @@ var CSS_TXT =
   '#capeink-nib svg{overflow:visible;display:block}' +
   '#capeink-nib svg path{fill:#fff}' +
   '#capeink-nib .ni-label{color:#fff;font:600 11px/1 Inter,system-ui,sans-serif;' +
-    'letter-spacing:.16em;text-transform:uppercase;white-space:nowrap;opacity:0;' +
+    'text-transform:uppercase;white-space:nowrap;opacity:0;' +
     'transition:opacity 200ms linear}' +
-  /* Il cursore gia' in pagina va a riposo sulle immagini: niente anello,
-     niente onda, niente scritta doppia. Non si tocca il suo codice — quello
-     scrive opacita' inline a ogni frame, e una regola !important le batte. */
-  'html.capeink-brush #capecur svg,' +
-  'html.capeink-brush #capecur .cc-ring,' +
-  'html.capeink-brush #capecur .cc-label{opacity:0!important}';
+  /* Il cursore gia' in pagina si spegne INTERO finche' sei sull'immagine.
+     Prima spegnevo i suoi tre pezzi uno per uno (l'onda, l'anello, la sua
+     scritta): basta che quel codice cambi un nome di classe e ne resta uno
+     acceso addosso al nostro. Spegnere il contenitore non ha quel problema —
+     qualunque cosa ci sia dentro, e' spenta.
+     Il suo codice non si tocca: scrive opacita' inline a ogni frame, e una
+     regola !important del foglio di stile le batte tutte. */
+  'html.capeink-brush #capecur{opacity:0!important}';
 
 function injectCSS(){
   var st = d.createElement('style');
@@ -844,10 +866,10 @@ function compose(t){
 
 
 /* ==========================================================================
-   3 · IL CURSORE-PENNELLO
-   Una punta che si inclina dove va la mano e si allunga con la velocita', e
-   sotto la scritta che dice che l'immagine si apre. La scritta c'e' sempre:
-   insegue la punta con un filo di ritardo invece di starle incollata.
+   3 · IL CURSORE
+   Sull'immagine e' solo la parola, che insegue il puntatore con un filo di
+   ritardo invece di starci incollata. La punta di pennello e' ancora qui sotto,
+   spenta da NIB: la meccanica c'e' tutta, basta riaccenderla.
    ========================================================================== */
 var Nib = (function(){
   var box = null, svg = null, lab = null;
@@ -867,6 +889,9 @@ var Nib = (function(){
     lab = box.querySelector('.ni-label');
     svg.style.width = NIB_L + 'px';
     svg.style.height = NIB_W + 'px';
+    svg.style.display = NIB ? 'block' : 'none';
+    lab.style.fontSize = LABEL_SZ + 'px';
+    lab.style.letterSpacing = LABEL_TR + 'em';
     d.body.appendChild(box);
     addEventListener('mousemove', function(e){
       tx = e.clientX; ty = e.clientY;
@@ -898,14 +923,14 @@ var Nib = (function(){
     still = spd < REST_SPD ? still + ms : 0;
     box.style.transform = 'translate(' + cx + 'px,' + cy + 'px)';
     /* volume costante: quando si allunga si assottiglia, come un tratto vero */
-    svg.style.transform = 'translate(-50%,-50%) rotate(' + rot.toFixed(2) + 'deg) ' +
+    if(NIB) svg.style.transform = 'translate(-50%,-50%) rotate(' + rot.toFixed(2) + 'deg) ' +
                           'scale(' + str.toFixed(3) + ',' + (1/Math.sqrt(str)).toFixed(3) + ')';
     var le = 1 - Math.pow(1 - LABEL_LAG, f);
     lx += (cx-lx)*le; ly += (cy-ly)*le;
     var ox = lx-cx, oy = ly-cy, om = Math.sqrt(ox*ox + oy*oy);
     if(om > LABEL_CAP){ var q = LABEL_CAP/om; ox *= q; oy *= q; lx = cx+ox; ly = cy+oy; }
     lab.style.transform = 'translate(-50%,-50%) translate(' + ox.toFixed(2) + 'px,' +
-                          (oy + NIB_W*0.5 + 15).toFixed(2) + 'px)';
+                          (oy + (NIB ? NIB_W*0.5 + 15 : LABEL_DY)).toFixed(2) + 'px)';
     lab.style.opacity = on ? String(still > REST_MS ? 1 : LABEL_MIN) : '0';
   }
 
@@ -919,6 +944,13 @@ var Nib = (function(){
       box.classList.add('is-on');
       d.documentElement.classList.add('capeink-brush');
       if(!raf) raf = requestAnimationFrame(frame);
+    },
+    restyle: function(){
+      if(!box) return;
+      svg.style.display = NIB ? 'block' : 'none';
+      svg.style.width = NIB_L + 'px'; svg.style.height = NIB_W + 'px';
+      lab.style.fontSize = LABEL_SZ + 'px';
+      lab.style.letterSpacing = LABEL_TR + 'em';
     },
     off: function(){
       if(!box) return;
@@ -1097,7 +1129,8 @@ function init(){
                 BRUSH_DRY:0, BRUSH_GRAVITY:0, BRUSH_CURL:0, BRUSH_AMB:0, VEL_DISS:0,
                 INK_K:0, RIM:0, RIM_W:0, FADE_IN:0, FADE_OUT:0, NIB_L:0, NIB_W:0,
                 NIB_MAX:0, NIB_SPD:0, TRAIL:0, REST_MS:0, REST_SPD:0, LABEL:0,
-                LABEL_MIN:0, LABEL_LAG:0, LABEL_CAP:0, Z_IMG:0, Z_BOX:0, SEL:0 };
+                LABEL_MIN:0, LABEL_LAG:0, LABEL_CAP:0, LABEL_DY:0, LABEL_SZ:0,
+                LABEL_TR:0, NIB:0, Z_IMG:0, Z_BOX:0, SEL:0 };
       var bakeAgain = false, k;
       for(k in o){
         if(!(k in K)) continue;
@@ -1128,6 +1161,10 @@ function init(){
         else if(k === 'LABEL_MIN') LABEL_MIN = o[k];
         else if(k === 'LABEL_LAG') LABEL_LAG = o[k];
         else if(k === 'LABEL_CAP') LABEL_CAP = o[k];
+        else if(k === 'LABEL_DY') LABEL_DY = o[k];
+        else if(k === 'LABEL_SZ'){ LABEL_SZ = o[k]; Nib.restyle(); }
+        else if(k === 'LABEL_TR'){ LABEL_TR = o[k]; Nib.restyle(); }
+        else if(k === 'NIB'){ NIB = !!o[k]; Nib.restyle(); }
         else if(k === 'SEL'){ SEL = o[k]; scan(); }   /* prende le nuove, non tocca le vecchie */
         else if(k === 'Z_IMG'){ Z_IMG = o[k]; for(var q=0;q<stages.length;q++) if(stages[q].isImg) stages[q].cv.style.zIndex = String(Z_IMG); }
         else if(k === 'Z_BOX'){ Z_BOX = o[k]; for(var w=0;w<stages.length;w++) if(!stages[w].isImg) stages[w].cv.style.zIndex = String(Z_BOX); }
@@ -1142,6 +1179,7 @@ function init(){
                RIM:RIM, RIM_W:RIM_W, FADE_IN:FADE_IN, FADE_OUT:FADE_OUT,
                NIB_L:NIB_L, NIB_W:NIB_W, NIB_MAX:NIB_MAX, LABEL:LABEL,
                LABEL_MIN:LABEL_MIN, LABEL_LAG:LABEL_LAG, LABEL_CAP:LABEL_CAP,
+               LABEL_DY:LABEL_DY, LABEL_SZ:LABEL_SZ, LABEL_TR:LABEL_TR, NIB:NIB,
                luminanceOnly:HAS_FILTER };
     },
     targets: function(){
