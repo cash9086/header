@@ -128,6 +128,22 @@ quanto sta sotto al puntatore, `LABEL_MIN` la sua opacita' mentre la mano corre
 (a 0 torna a comparire solo a mano ferma). Se su una certa immagine non la vuoi,
 `data-cursor=""`.
 
+### Il passaggio fra i due
+
+Il logo che sparisce e la parola che appare non sono due dissolvenze: sono un
+cambio di turno. Il logo esce (180ms, ease-in) e la parola **sale da sotto dentro
+una finestra che la ritaglia**, mentre il tracking si stringe — arriva larga e si
+raccoglie. E' la stessa lingua delle righe di testo che gia' salgono nella
+sezione delle opere, non un movimento inventato per l'occasione.
+
+In uscita la parola **prosegue verso l'alto** invece di tornare giu': non e'
+l'animazione al contrario, e' la stessa che continua. Nel frattempo il logo
+rientra, cosi' non ci sono mai due cose insieme sullo schermo.
+
+`LAB_IN` la salita (460ms), `LAB_OUT` l'uscita (260ms), `LAB_DELAY` quanto
+aspetta prima di partire (90ms — sotto i 60 si accavalla col logo che esce),
+`LABEL_TR_IN` quanto tracking in piu' ha in partenza.
+
 ### Perche' il cursore della pagina si spegne intero
 
 Prima ne spegnevo i tre pezzi uno per uno — l'onda, l'anello, la sua scritta.
@@ -220,6 +236,7 @@ che si toccano davvero:
 | `SEL` | chi prende l'inchiostro | `.ink-invert, [data-ink-invert]` |
 | `LABEL_MIN` | opacita' della scritta a mano in movimento | `1` |
 | `NIB` | rimette il simbolo del pennello sotto la scritta | `false` |
+| `BUSY_MAX` | per quanti ms al massimo l'inchiostro si ritira quando lo slider cambia quadro | `900` |
 | `GRADE` | l'inversione, in una riga | `invert(1) hue-rotate(180deg) saturate(.92) contrast(1.04)` |
 | `BRUSH_SIZE` | grandezza della punta, in % dell'altezza dell'immagine | `1.7` |
 | `BRUSH_DRY` | quanto asciuga in fretta: piu' alto = il tratto svanisce prima | `1.45` |
@@ -254,3 +271,27 @@ negativo classico. Si perde la sola-luminanza, ma nessuno resta a bocca asciutta
 Fuori dallo schermo, a scheda in background e mentre lo stage cambia opera la
 fisica si ferma e l'inchiostro si ritira: un'immagine sta nella lista solo
 finche' ha inchiostro addosso, poi la GPU torna a dormire.
+
+### Quando lo slider cambia quadro
+
+L'inchiostro si ritira mentre l'immagine **scorre**, se no resterebbe attaccato
+a un quadro che sta uscendo di scena. Il punto delicato e' per quanto: la classe
+`is-busy` dello slider non dura quanto il movimento: la mettono all'inizio e la
+tolgono quando finisce tutta la coreografia, testi compresi — circa **1,8
+secondi**, mentre l'immagine si muove solo per i primi **0,9**. Seguendo `is-busy`
+alla lettera l'inchiostro restava spento per quasi un secondo in cui non si
+muoveva piu' niente, e passando sopra sembrava rotto.
+
+`BUSY_MAX` mette il tetto: si sospende al massimo 900ms, quanto dura davvero il
+movimento. Misurato prima e dopo, in browser: da **2,0s** a **1,2s** di attesa,
+e i 900ms che restano sono esattamente quelli in cui l'immagine scorre.
+
+Insieme a quello, due dettagli che facevano la loro parte:
+
+- la copia invertita **non si spegne piu'** mentre se ne cuoce una nuova. Prima
+  il cambio di quadro azzerava `ready`, e per qualche frame non si dipingeva
+  niente. Meglio l'inchiostro del quadro precedente per un frame che un buco.
+- l'osservatore che accorge del cambio aveva un debounce semplice, e lo slider
+  scrive una `style` a ogni frame: il timer non scadeva **mai** finche'
+  l'animazione andava. Ora c'e' un tetto d'attesa, quindi il quadro nuovo si
+  vede mentre succede.

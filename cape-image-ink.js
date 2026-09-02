@@ -195,6 +195,22 @@ var LABEL_SZ = 11;     /* corpo (px). E' quello del cursore gia' in pagina: la
                           scritta cambia posto, non voce                       */
 var LABEL_TR = 0.16;   /* tracking (em). Su un font piccolo tutto maiuscolo e'
                           quello che lo rende leggibile invece che compatto    */
+
+/* IL PASSAGGIO. Il logo che sparisce e la scritta che appare non sono due
+   dissolvenze: sono un cambio di turno. Il logo esce, e la parola SALE da sotto
+   dentro una finestra che la ritaglia — la stessa lingua delle righe di testo
+   che gia' salgono nella sezione delle opere, non un movimento inventato qui.
+   Mentre sale il tracking si stringe: la parola arriva larga e si raccoglie.
+   E' l'unico pezzo di animazione dell'effetto e dura meno di mezzo secondo.
+   In uscita la parola prosegue verso l'ALTO invece di tornare giu': non e'
+   l'animazione al contrario, e' la stessa che continua — e nel frattempo il
+   logo rientra, cosi' non ci sono mai due cose insieme. */
+var LAB_IN   = 460;    /* la salita (ms)                                       */
+var LAB_OUT  = 260;    /* l'uscita verso l'alto (ms)                           */
+var LAB_DELAY= 90;     /* quanto aspetta prima di salire: il tempo che il logo
+                          se ne vada. Sotto i 60 si accavallano.               */
+var LABEL_TR_IN = 0.18;/* tracking IN PIU' all'inizio della salita (em): la
+                          parola entra larga e si stringe arrivando            */
 var REST_MS  = 240;    /* quanto deve stare ferma la mano per dirla "ferma"   */
 var REST_SPD = 42;     /* px/s sotto cui la mano e' considerata ferma         */
 
@@ -204,9 +220,18 @@ var SIM      = 96;     /* risoluzione del campo di moto (lato corto)         */
 var DYE      = 384;    /* risoluzione del colorante (lato corto)             */
 var ITER     = 18;     /* giri di pressione                                  */
 var MAX_PX   = 2.2e6;  /* tetto ai pixel del canvas: oltre, si abbassa il dpr */
-var BUSY_SEL = '.is-busy'; /* mentre la sezione cambia opera, l'inchiostro si
-                              ritira invece di restare appiccicato a un'immagine
-                              che sta scorrendo via                            */
+var BUSY_SEL = '.is-busy'; /* mentre l'immagine SCORRE l'inchiostro si ritira,
+                              invece di restare appiccicato a un quadro che sta
+                              uscendo di scena                                 */
+var BUSY_MAX = 900;    /* ...ma per non piu' di tanti ms, ed e' il motivo per cui
+                          esiste questa manopola. La classe is-busy dello slider
+                          non dura quanto il movimento dell'immagine: la mettono
+                          all'inizio e la tolgono quando finisce TUTTA la
+                          coreografia, testi compresi — circa 1,8 secondi, mentre
+                          l'immagine si muove solo per i primi 0,9. Senza tetto
+                          l'inchiostro resta spento per quasi un secondo in cui
+                          non c'e' piu' niente che si muove, e passando sopra
+                          sembra rotto. 0 = nessun tetto, torna il difetto.     */
 /* Dove si infila il canvas nella pila. Due casi diversi e vale la pena dirlo:
    - su un <img> il canvas si inserisce SUBITO DOPO l'immagine e sta a 0, cosi'
      una didascalia posizionata che viene dopo nel DOM gli resta sopra: si
@@ -564,15 +589,17 @@ var CSS_TXT =
   /* La punta del pennello. difference come il cursore gia' in pagina, cosi'
      resta leggibile sia sul chiaro sia sullo scuro. */
   '#capeink-nib{position:fixed;top:0;left:0;width:0;height:0;z-index:2147483646;' +
-    'pointer-events:none;mix-blend-mode:difference;opacity:0;will-change:transform,opacity;' +
-    'transition:opacity 180ms linear}' +
+    'pointer-events:none;mix-blend-mode:difference;opacity:0;will-change:transform}' +
   '#capeink-nib.is-on{opacity:1}' +
   '#capeink-nib>*{position:absolute;top:0;left:0;transform:translate(-50%,-50%)}' +
   '#capeink-nib svg{overflow:visible;display:block}' +
   '#capeink-nib svg path{fill:#fff}' +
+  /* la finestra che ritaglia: e' lei a fare la rivelazione, non un'opacita' */
   '#capeink-nib .ni-label{color:#fff;font:600 11px/1 Inter,system-ui,sans-serif;' +
     'text-transform:uppercase;white-space:nowrap;opacity:0;' +
-    'transition:opacity 200ms linear}' +
+    'display:block;overflow:hidden;transition:opacity 200ms linear}' +
+  '#capeink-nib .ni-word{display:block;font-style:normal;line-height:1.3;' +
+    'will-change:transform;transform:translateY(110%)}' +
   /* Il cursore gia' in pagina si spegne INTERO finche' sei sull'immagine.
      Prima spegnevo i suoi tre pezzi uno per uno (l'onda, l'anello, la sua
      scritta): basta che quel codice cambi un nome di classe e ne resta uno
@@ -580,7 +607,8 @@ var CSS_TXT =
      qualunque cosa ci sia dentro, e' spenta.
      Il suo codice non si tocca: scrive opacita' inline a ogni frame, e una
      regola !important del foglio di stile le batte tutte. */
-  'html.capeink-brush #capecur{opacity:0!important}';
+  'html.capeink-brush #capecur{opacity:0!important}' +
+  '#capecur{transition:opacity 180ms cubic-bezier(.4,0,1,1)!important}';
 
 function injectCSS(){
   var st = d.createElement('style');
@@ -663,7 +691,7 @@ function Stage(el){
     cv:null, ctx:null, gl:null, F:null,
     cache:null, cctx:null, url:null, ready:false,
     w:0, h:0, dpr:1,
-    over:false, want:0, have:0, wet:0,
+    over:false, want:0, have:0, wet:0, busy0:0,
     px:0.5, py:0.5, lx:0.5, ly:0.5, had:false, seen:false,
     dead:false
   };
@@ -797,7 +825,11 @@ function Stage(el){
     var src = findSource(el);
     if(!src || !src.url) return;
     if(!force && src.url === t.url && t.ready) return;
-    if(src.url !== t.url){ t.url = src.url; t.ready = false; load(); return; }
+    /* NIENTE t.ready = false qui. Il quadro nuovo ci mette un frame o due ad
+       arrivare, e spegnendo la copia vecchia in quei frame non si dipinge
+       niente: un buco visibile proprio mentre passi sopra. Meglio l'inchiostro
+       del quadro precedente per un frame che nessun inchiostro. */
+    if(src.url !== t.url){ t.url = src.url; load(); return; }
     if(t.img) t.ready = bake(t.img, t.src || src);
   }
   t.refresh = refresh;
@@ -877,7 +909,7 @@ function compose(t){
    spenta da NIB: la meccanica c'e' tutta, basta riaccenderla.
    ========================================================================== */
 var Nib = (function(){
-  var box = null, svg = null, lab = null;
+  var box = null, svg = null, lab = null, wrd = null, exitT = 0;
   var tx = 0, ty = 0, cx = 0, cy = 0, px = 0, py = 0;
   var rot = 0, str = 1, spd = 0, still = 0, on = false, seen = false, raf = 0, last = 0;
   var lx = 0, ly = 0;                                  /* la scritta, che insegue */
@@ -889,14 +921,15 @@ var Nib = (function(){
     box.innerHTML =
       '<svg viewBox="0 0 100 20" preserveAspectRatio="none">' +
       '<path d="M0,10 C26,0.6 74,0.6 100,10 C74,19.4 26,19.4 0,10 Z"></path></svg>' +
-      '<span class="ni-label"></span>';
+      '<span class="ni-label"><i class="ni-word"></i></span>';
     svg = box.querySelector('svg');
     lab = box.querySelector('.ni-label');
+    wrd = box.querySelector('.ni-word');
     svg.style.width = NIB_L + 'px';
     svg.style.height = NIB_W + 'px';
     svg.style.display = NIB ? 'block' : 'none';
     lab.style.fontSize = LABEL_SZ + 'px';
-    lab.style.letterSpacing = LABEL_TR + 'em';
+    wrd.style.letterSpacing = LABEL_TR + 'em';
     d.body.appendChild(box);
     addEventListener('mousemove', function(e){
       tx = e.clientX; ty = e.clientY;
@@ -936,7 +969,9 @@ var Nib = (function(){
     if(om > LABEL_CAP){ var q = LABEL_CAP/om; ox *= q; oy *= q; lx = cx+ox; ly = cy+oy; }
     lab.style.transform = 'translate(-50%,-50%) translate(' + ox.toFixed(2) + 'px,' +
                           (oy + (NIB ? NIB_W*0.5 + 15 : LABEL_DY)).toFixed(2) + 'px)';
-    lab.style.opacity = on ? String(still > REST_MS ? 1 : LABEL_MIN) : '0';
+    /* durante l'uscita si tiene accesa: a portarla via e' la finestra che la
+       ritaglia, non una dissolvenza. Due movimenti insieme sono uno di troppo. */
+    lab.style.opacity = (on || exitT) ? String(still > REST_MS ? 1 : LABEL_MIN) : '0';
   }
 
   return {
@@ -944,10 +979,25 @@ var Nib = (function(){
       if(!CUR) return;
       if(!box) build();
       var w = el.getAttribute ? el.getAttribute('data-cursor') : null;
-      lab.textContent = (w === null) ? LABEL : w;   /* "" = nessuna scritta */
+      wrd.textContent = (w === null) ? LABEL : w;   /* "" = nessuna scritta */
       on = true; last = 0; lx = cx; ly = cy;
+      clearTimeout(exitT); exitT = 0;
       box.classList.add('is-on');
-      d.documentElement.classList.add('capeink-brush');
+      d.documentElement.classList.add('capeink-brush');   /* il logo esce ora */
+
+      /* la salita: si riparte da sotto SENZA transizione, si forza il reflow,
+         poi si accende la transizione. Senza il reflow in mezzo il browser
+         accorpa i due valori e non anima niente. */
+      var EASE = 'cubic-bezier(.16,1,.3,1)';
+      wrd.style.transition = 'none';
+      wrd.style.transform = 'translateY(110%)';
+      wrd.style.letterSpacing = (LABEL_TR + LABEL_TR_IN).toFixed(3) + 'em';
+      void wrd.offsetWidth;
+      wrd.style.transition = 'transform ' + LAB_IN + 'ms ' + EASE + ' ' + LAB_DELAY + 'ms,' +
+                             'letter-spacing ' + LAB_IN + 'ms ' + EASE + ' ' + LAB_DELAY + 'ms';
+      wrd.style.transform = 'translateY(0)';
+      wrd.style.letterSpacing = LABEL_TR + 'em';
+
       if(!raf) raf = requestAnimationFrame(frame);
     },
     restyle: function(){
@@ -955,15 +1005,25 @@ var Nib = (function(){
       svg.style.display = NIB ? 'block' : 'none';
       svg.style.width = NIB_L + 'px'; svg.style.height = NIB_W + 'px';
       lab.style.fontSize = LABEL_SZ + 'px';
-      lab.style.letterSpacing = LABEL_TR + 'em';
+      wrd.style.letterSpacing = LABEL_TR + 'em';
     },
     off: function(){
       if(!box) return;
       on = false;
-      box.classList.remove('is-on');
-      d.documentElement.classList.remove('capeink-brush');
       still = 0;
-      if(raf){ cancelAnimationFrame(raf); raf = 0; }
+
+      /* la parola prosegue verso l'alto: non torna indietro, esce dalla parte
+         opposta. Il logo rientra mentre lei se ne va, cosi' non si sovrappongono. */
+      wrd.style.transition = 'transform ' + LAB_OUT + 'ms cubic-bezier(.6,0,.9,.2)';
+      wrd.style.transform = 'translateY(-110%)';
+
+      clearTimeout(exitT);
+      exitT = setTimeout(function(){
+        exitT = 0;
+        box.classList.remove('is-on');
+        d.documentElement.classList.remove('capeink-brush');
+        if(raf){ cancelAnimationFrame(raf); raf = 0; }
+      }, LAB_OUT + 20);
     }
   };
 })();
@@ -1018,9 +1078,13 @@ var Eng = (function(){
 
     for(i = 0; i < live.length; i++){
       t = live[i];
-      /* mentre la sezione cambia quadro, l'inchiostro si ritira invece di
-         restare appiccicato a un'immagine che sta scorrendo via */
-      var busy = BUSY_SEL && t.el.closest && t.el.closest(BUSY_SEL);
+      /* mentre l'immagine scorre l'inchiostro si ritira — ma solo per il tempo
+         in cui scorre davvero, non per tutta la coreografia (vedi BUSY_MAX). */
+      var busy = !!(BUSY_SEL && t.el.closest && t.el.closest(BUSY_SEL));
+      if(busy){
+        if(!t.busy0) t.busy0 = now;
+        if(BUSY_MAX > 0 && now - t.busy0 > BUSY_MAX) busy = false;
+      } else t.busy0 = 0;
       var want = (t.over && !busy && !paused) ? 1 : 0;
       var r = (want > t.have ? ms/FADE_IN : ms/FADE_OUT);
       t.have = want > t.have ? Math.min(want, t.have + r) : Math.max(want, t.have - r);
@@ -1041,6 +1105,12 @@ var Eng = (function(){
       t.F.render(t.have);
       compose(t);
       if(t.have > 0.004) t.cv.classList.add('is-on');
+      /* Asciugato del tutto ma il cursore e' ancora li' (e' il caso dello
+         slider che ha appena cambiato quadro): il prossimo tratto deve
+         ripartire dal punto in cui sta la mano adesso. Senza questo, la prima
+         pennellata ricongiunge il punto vecchio col nuovo e lascia una riga
+         dritta attraverso mezza immagine. */
+      if(t.over && t.have <= 0.0002) t.had = false;
       if(!t.over && t.have <= 0.0002) retire(t);
     }
 
@@ -1092,10 +1162,18 @@ function attach(el){
      background-image la copia invertita va rifatta, se no si dipinge il
      negativo del quadro precedente. */
   if(!t.isImg && window.MutationObserver){
-    var mt = 0;
+    /* Attenzione al debounce semplice: durante la transizione lo slider scrive
+       una style ogni frame, quindi un timer che si azzera a ogni mutazione non
+       scade MAI finche' l'animazione va — e il quadro nuovo lo scopriamo solo
+       alla fine. Qui c'e' anche un tetto d'attesa: comunque vada si guarda ogni
+       BEAT ms, cosi' il cambio si vede mentre succede. */
+    var mt = 0, first = 0, BEAT = 220;
     new MutationObserver(function(){
-      clearTimeout(mt);
-      mt = setTimeout(function(){ t.refresh(false); }, 90);
+      var n = (window.performance && performance.now) ? performance.now() : Date.now();
+      if(!first) first = n;
+      if(n - first >= BEAT){ clearTimeout(mt); mt = 0; first = 0; t.refresh(false); return; }
+      if(mt) return;
+      mt = setTimeout(function(){ mt = 0; first = 0; t.refresh(false); }, BEAT);
     }).observe(el, { subtree:true, attributes:true, attributeFilter:['style','src','class'] });
   }
 
@@ -1135,7 +1213,8 @@ function init(){
                 INK_K:0, RIM:0, RIM_W:0, FADE_IN:0, FADE_OUT:0, NIB_L:0, NIB_W:0,
                 NIB_MAX:0, NIB_SPD:0, TRAIL:0, REST_MS:0, REST_SPD:0, LABEL:0,
                 LABEL_MIN:0, LABEL_LAG:0, LABEL_CAP:0, LABEL_DY:0, LABEL_SZ:0,
-                LABEL_TR:0, NIB:0, Z_IMG:0, Z_BOX:0, SEL:0 };
+                LABEL_TR:0, NIB:0, Z_IMG:0, Z_BOX:0, SEL:0, BUSY_MAX:0,
+                LAB_IN:0, LAB_OUT:0, LAB_DELAY:0, LABEL_TR_IN:0 };
       var bakeAgain = false, k;
       for(k in o){
         if(!(k in K)) continue;
@@ -1167,6 +1246,11 @@ function init(){
         else if(k === 'LABEL_LAG') LABEL_LAG = o[k];
         else if(k === 'LABEL_CAP') LABEL_CAP = o[k];
         else if(k === 'LABEL_DY') LABEL_DY = o[k];
+        else if(k === 'BUSY_MAX') BUSY_MAX = o[k];
+        else if(k === 'LAB_IN') LAB_IN = o[k];
+        else if(k === 'LAB_OUT') LAB_OUT = o[k];
+        else if(k === 'LAB_DELAY') LAB_DELAY = o[k];
+        else if(k === 'LABEL_TR_IN') LABEL_TR_IN = o[k];
         else if(k === 'LABEL_SZ'){ LABEL_SZ = o[k]; Nib.restyle(); }
         else if(k === 'LABEL_TR'){ LABEL_TR = o[k]; Nib.restyle(); }
         else if(k === 'NIB'){ NIB = !!o[k]; Nib.restyle(); }
@@ -1185,11 +1269,13 @@ function init(){
                NIB_L:NIB_L, NIB_W:NIB_W, NIB_MAX:NIB_MAX, LABEL:LABEL,
                LABEL_MIN:LABEL_MIN, LABEL_LAG:LABEL_LAG, LABEL_CAP:LABEL_CAP,
                LABEL_DY:LABEL_DY, LABEL_SZ:LABEL_SZ, LABEL_TR:LABEL_TR, NIB:NIB,
+               BUSY_MAX:BUSY_MAX, LAB_IN:LAB_IN, LAB_OUT:LAB_OUT, LAB_DELAY:LAB_DELAY,
                luminanceOnly:HAS_FILTER };
     },
     targets: function(){
       return stages.map(function(t){
-        return { el:t.el, size:t.w + 'x' + t.h, source:t.url, ready:t.ready };
+        return { el:t.el, size:t.w + 'x' + t.h, source:t.url, ready:t.ready,
+                 ink:Math.round(t.have*100)/100, over:t.over };
       });
     },
     rescan:  function(){ scan(); },
